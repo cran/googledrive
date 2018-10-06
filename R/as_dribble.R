@@ -47,7 +47,7 @@ as_dribble.dribble <- function(x, ...) x
 #' @export
 as_dribble.default <- function(x, ...) {
   stop_glue_data(
-    list(x = collapse(class(x), sep = "/")),
+    list(x = glue_collapse(class(x), sep = "/")),
     "Don't know how to coerce object of class {x} into a dribble"
   )
 }
@@ -69,7 +69,7 @@ as_dribble.list <- function(x, ...) {
   if (length(x) == 0) return(dribble())
 
   required_nms <- c("name", "id", "kind")
-  stopifnot(purrr::map_lgl(x, ~ all(required_nms %in% names(.x))))
+  stopifnot(purrr::map_lgl(x, ~all(required_nms %in% names(.x))))
 
   as_dribble(
     tibble::tibble(

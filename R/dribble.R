@@ -39,16 +39,20 @@ validate_dribble <- function(x) {
   if (!has_dribble_cols(x)) {
     missing_cols <- setdiff(dribble_cols, colnames(x))
     stop_collapse(
-      c("Invalid dribble. These required column names are missing:",
-        missing_cols)
+      c(
+        "Invalid dribble. These required column names are missing:",
+        missing_cols
+      )
     )
   }
 
   if (!has_dribble_coltypes(x)) {
     mistyped_cols <- dribble_cols[!dribble_coltypes_ok(x)]
     stop_collapse(
-      c("Invalid dribble. These columns have the wrong type:",
-        mistyped_cols)
+      c(
+        "Invalid dribble. These columns have the wrong type:",
+        mistyped_cols
+      )
     )
   }
 
@@ -78,9 +82,9 @@ dribble <- function(x = NULL) {
 
 maybe_dribble <- function(x) {
   if (is.data.frame(x) &&
-      has_dribble_cols(x) &&
-      has_dribble_coltypes(x) &&
-      has_drive_resource(x)) {
+    has_dribble_cols(x) &&
+    has_dribble_coltypes(x) &&
+    has_drive_resource(x)) {
     new_dribble(x)
   } else {
     as_tibble(x)
@@ -103,9 +107,11 @@ has_dribble_cols <- function(x) {
 }
 
 dribble_coltypes_ok <- function(x) {
-  c(name = is.character(x$name),
+  c(
+    name = is.character(x$name),
     id = is.character(x$id),
-    drive_resource = inherits(x$drive_resource, "list"))
+    drive_resource = inherits(x$drive_resource, "list")
+  )
 }
 
 has_dribble_coltypes <- function(x) {
@@ -113,7 +119,7 @@ has_dribble_coltypes <- function(x) {
 }
 
 has_drive_resource <- function(x) {
-  kind <- purrr::map_chr(x$drive_resource, "kind", .null = NA_character_)
+  kind <- purrr::map_chr(x$drive_resource, "kind", .default = NA_character_)
   all(!is.na(kind) & kind %in% c("drive#file", "drive#teamDrive"))
 }
 
@@ -135,7 +141,8 @@ as_parent <- function(d) {
   if (!is_parental(d)) {
     stop_glue(
       "Requested parent {bt(in_var)} is invalid: neither a folder ",
-      "nor a Team Drive.")
+      "nor a Team Drive."
+    )
   }
   d
 }
@@ -270,7 +277,7 @@ is_team_drive <- function(d) {
 is_team_drivy <- function(d) {
   stopifnot(inherits(d, "dribble"))
   is_team_drive(d) |
-    purrr::map_lgl(d$drive_resource, ~ !is.null(.x[["teamDriveId"]]))
+    purrr::map_lgl(d$drive_resource, ~!is.null(.x[["teamDriveId"]]))
 }
 
 ## promote an element in drive_resource into a top-level variable
@@ -281,7 +288,7 @@ is_team_drivy <- function(d) {
 promote <- function(d, elem) {
   elem_orig <- elem
   elem <- camelCase(elem)
-  present <- any(purrr::map_lgl(d$drive_resource, ~ elem %in% names(.x)))
+  present <- any(purrr::map_lgl(d$drive_resource, ~elem %in% names(.x)))
   if (present) {
     val <- purrr::simplify(purrr::map(d$drive_resource, elem))
     ## TO DO: find a way to emulate .default behavior from type-specific

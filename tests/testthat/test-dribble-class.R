@@ -81,7 +81,7 @@ test_that("`[` drops dribble class when not valid", {
   )
   expect_s3_class(d, "dribble")
   expect_false(inherits(d[1], "dribble"))
-  expect_false(inherits(d[ , 1], "dribble"))
+  expect_false(inherits(d[, 1], "dribble"))
 })
 
 test_that("dribble nrow checkers work", {
@@ -125,7 +125,7 @@ test_that("is_folder() works", {
   expect_identical(is_folder(dribble()), logical(0))
   d <- new_dribble(
     tibble::tribble(
-      ~ name, ~ id, ~ drive_resource,
+      ~name, ~id, ~drive_resource,
       "a", "aa", list(mimeType = "application/vnd.google-apps.folder"),
       "b", "bb", list(mimeType = "foo")
     )

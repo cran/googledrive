@@ -16,27 +16,34 @@ skip_if_offline <- (function() {
   }
 })()
 
+has_token <- function() {
+  env_var <- as.logical(Sys.getenv("GOOGLEDRIVE_LOAD_TOKEN", NA_character_))
+  if (isFALSE(env_var)) {
+    message("Not attempting to load token")
+    return(FALSE)
+  }
+
+  token <- tryCatch({
+    token_path <- file.path("~/.R/gargle/googledrive-testing.json")
+    drive_auth(service_token = token_path)
+    TRUE
+  }
+  ,
+  warning = function(x) FALSE,
+  error = function(e) FALSE
+  )
+  if (!token) {
+    message("Unable to load token")
+  }
+
+  token
+}
+
 skip_if_no_token <- (function() {
-  no_token <- NA
+  has_token <- NULL
   function() {
-    if (is.na(no_token)) {
-      env_var <- as.logical(Sys.getenv("GOOGLEDRIVE_LOAD_TOKEN", NA_character_))
-      if (isFALSE(env_var)) {
-        no_token <<- TRUE
-        message("Not attempting to load token")
-      } else {
-        token <- tryCatch(
-          drive_auth(rprojroot::find_testthat_root_file("testing-token.rds")),
-          warning = function(x) FALSE,
-          error = function(e) FALSE
-        )
-        no_token <<- isFALSE(token)
-        if (no_token) {
-          message("Unable to load token")
-        }
-      }
-    }
-    if (no_token) testthat::skip("No Drive token")
+    has_token <<- has_token %||% has_token()
+    testthat::skip_if_not(has_token, "No Drive token")
   }
 })()
 
@@ -45,7 +52,7 @@ tryCatch(skip_if_no_token(), skip = function(x) NULL)
 
 nm_fun <- function(context, user = Sys.info()["user"]) {
   y <- purrr::compact(list(context, user))
-  function(x) as.character(glue::collapse(c(x, y), sep = "-"))
+  function(x) as.character(glue_collapse(c(x, y), sep = "-"))
 }
 
 message("Test file naming scheme:\n  * ", nm_fun("TEST-context")("foo"))

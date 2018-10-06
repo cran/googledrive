@@ -60,6 +60,13 @@
 #'
 #' ## Clean up
 #' drive_rm(chicken)
+#'
+#' ## Upload to a Team Drive:
+#' ##   * your Google account must have Team Drive privileges, obviously
+#' ##   * the Team Drive (or Team Drive-hosted folder) MUST be captured as a
+#' ##     dribble first and provided via `path`
+#' td <- team_drive_get("Marketing")
+#' drive_upload("fascinating.csv", path = td)
 #' }
 drive_upload <- function(media,
                          path = NULL,
@@ -67,7 +74,6 @@ drive_upload <- function(media,
                          type = NULL,
                          ...,
                          verbose = TRUE) {
-
   if (!file.exists(media)) {
     stop_glue("\nFile does not exist:\n  * {media}")
   }
@@ -127,9 +133,10 @@ drive_upload <- function(media,
   out <- as_dribble(list(process_response(response)))
 
   if (verbose) {
-    message_glue("\nLocal file:\n  * {media}\n",
-          "uploaded into Drive file:\n  * {out$name}: {out$id}\n",
-          "with MIME type:\n  * {out$drive_resource[[1]]$mimeType}"
+    message_glue(
+      "\nLocal file:\n  * {media}\n",
+      "uploaded into Drive file:\n  * {out$name}: {out$id}\n",
+      "with MIME type:\n  * {out$drive_resource[[1]]$mimeType}"
     )
   }
   invisible(out)

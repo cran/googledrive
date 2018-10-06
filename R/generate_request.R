@@ -129,7 +129,6 @@ build_request <- function(path = "",
                           params = list(),
                           body = list(),
                           token = NULL) {
-
   params <- partition_params(params, extract_path_names(path))
 
   out <- list(
@@ -141,7 +140,7 @@ build_request <- function(path = "",
   )
 
   out$url <- httr::modify_url(
-    url = .drive$base_url,
+    url = attr(.endpoints, "base_url"),
     path = out$path,
     ## prevent a trailing `?` or `?=` when the query is trivial, e.g. list() or
     ## contains a single element which is NULL
@@ -208,5 +207,5 @@ extract_path_names <- function(path) {
 }
 
 extract_body_names <- function(params) {
-  names(params)[purrr::map_lgl(params, ~ .x[["location"]] == "body")]
+  names(params)[purrr::map_lgl(params, ~.x[["location"]] == "body")]
 }
