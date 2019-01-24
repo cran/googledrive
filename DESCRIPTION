@@ -1,6 +1,6 @@
 Package: googledrive
 Title: An Interface to Google Drive
-Version: 0.1.2
+Version: 0.1.3
 Authors@R: c(
     person("Lucy", "D'Agostino McGowan", email = "ld.mcgowan@vanderbilt.edu",
       role = c("aut")),
@@ -20,12 +20,12 @@ Suggests: covr, dplyr, knitr, pingr, rmarkdown, rprojroot, testthat
 VignetteBuilder: knitr
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 6.1.0
+RoxygenNote: 6.1.1
 NeedsCompilation: no
-Packaged: 2018-10-06 07:38:07 UTC; jenny
+Packaged: 2019-01-24 21:07:08 UTC; jenny
 Author: Lucy D'Agostino McGowan [aut],
   Jennifer Bryan [aut, cre] (<https://orcid.org/0000-0002-6983-2759>),
   RStudio [cph, fnd]
 Maintainer: Jennifer Bryan <jenny@rstudio.com>
 Repository: CRAN
-Date/Publication: 2018-10-06 08:00:03 UTC
+Date/Publication: 2019-01-24 21:40:04 UTC

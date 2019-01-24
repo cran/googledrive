@@ -1,7 +1,7 @@
-c14e03a6c78c93c9682491f53b7bdf31 *DESCRIPTION
+444209d3d8bb08cfd172c1af82bde14d *DESCRIPTION
 d9fbd807fa7f58612dbaf8935103fc9a *LICENSE
 28bc263c4179e0596546e6419cad02f4 *NAMESPACE
-87df1eb44459926053dd79f3511e2359 *NEWS.md
+486d478e9a5d30237927f5ce324ed954 *NEWS.md
 319006c51a86ab05b41d8079fee1a007 *R/aaa.R
 619278b3fadd7b973e04413a55ae4574 *R/as_dribble.R
 c020fc62385183b8af5a0cbfac2291e2 *R/as_id.R
@@ -33,7 +33,7 @@ f9efabc6668f2bd6ac4a854378a0f575 *R/drive_trash.R
 54deb35c8fb9b6910870aba28fa33621 *R/drive_update.R
 9edab9b6c662901df71fc5f25ad5cf04 *R/drive_upload.R
 eaf97f9757ffd6c12f9460fdd755f820 *R/drive_user.R
-a8163f242a3d2d20cf4558f4828ec563 *R/generate_request.R
+7604b026d7b500362c4d01c9bce3114d *R/generate_request.R
 82d5286f0188574645fabd60503d74a4 *R/googledrive-package.R
 51cb1f06376987b9c875895532ee0de1 *R/make_request.R
 05a5f757621be26784feace675359674 *R/process_response.R
@@ -48,7 +48,7 @@ e7b91f7b39022a2367234c0f105a248e *R/tree-climbing.R
 bd936a8268da63c82796546a8b6797ba *R/utils-paths.R
 597c91fbf6216981e89cfd6f1af759e3 *R/utils.R
 4b2dbb5ff6df20b3e2f9492ec24350bb *README.md
-a8490401aab299f6732c967e48729211 *build/vignette.rds
+04481e0624852cdb7d2f4e8ebc1fa844 *build/vignette.rds
 af88656bce0fd2cf3c81364c2dabb766 *inst/doc/googledrive.Rmd
 1cdbb7de4719e9cf876485a47ad11f11 *inst/doc/googledrive.html
 c1fe9be9e93f097020c8b58327d8e4be *inst/extdata/chicken.csv
@@ -65,7 +65,7 @@ e1b7442cdb6f5fd1e0b53a93d4912610 *man/dribble-checks.Rd
 1368dbf46f411c4b8013637eff5e7585 *man/dribble.Rd
 6a4501b5ae3dbc9a67e678a1da703b6c *man/drive_about.Rd
 ba237f2c5d7a98099dc12a8fa18a804c *man/drive_api_key.Rd
-f04ccafff310b73baf1748db0bb56fb7 *man/drive_auth.Rd
+662484db1e02eb94e1329c1019d72902 *man/drive_auth.Rd
 7e7ed0993e0e8d45ea63c9b56597435b *man/drive_auth_config.Rd
 094562abc66ed956633bc4deabf65054 *man/drive_browse.Rd
 6f662c8c64cf0fc5409267d9baaf9453 *man/drive_cp.Rd
