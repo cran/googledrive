@@ -1,7 +1,8 @@
 #' Update an existing Drive file
 #'
 #' Update an existing Drive file id with new content ("media" in Drive
-#' API-speak), new metadata, or both.
+#' API-speak), new metadata, or both.  To create a new file or update existing,
+#' depending on whether the Drive file already exists, see [drive_put()].
 #'
 #' @seealso Wraps the `files.update` endpoint:
 #'   * <https://developers.google.com/drive/v3/reference/files/update>
@@ -57,7 +58,7 @@ drive_update <- function(file,
   file <- as_dribble(file)
   file <- confirm_single_file(file)
 
-  meta <- toCamel(list(...))
+  meta <- toCamel(rlang::list2(...))
 
   if (is.null(media) && length(meta) == 0) {
     if (verbose) message("No updates specified.")
@@ -85,7 +86,7 @@ drive_update <- function(file,
 
 ## currently this can never be called, because we always send fields
 drive_update_media <- function(file, media) {
-  request <- generate_request(
+  request <- request_generate(
     endpoint = "drive.files.update.media",
     params = list(
       fileId = file$id,
@@ -96,30 +97,30 @@ drive_update_media <- function(file, media) {
 
   ## media uploads have unique body situations, so customizing here.
   request$body <- httr::upload_file(path = media)
-  response <- make_request(request, encode = "json")
-  as_dribble(list(process_response(response)))
+  response <- request_make(request, encode = "json")
+  as_dribble(list(gargle::response_process(response)))
 }
 
 drive_update_metadata <- function(file, meta) {
-  request <- generate_request(
+  request <- request_generate(
     endpoint = "drive.files.update",
     params = c(
       fileId = file$id,
       meta
     )
   )
-  response <- make_request(request, encode = "json")
-  as_dribble(list(process_response(response)))
+  response <- request_make(request, encode = "json")
+  as_dribble(list(gargle::response_process(response)))
 }
 
 drive_update_multipart <- function(file, media, meta) {
-  request <- generate_request(
+  request <- request_generate(
     endpoint = "drive.files.update.media",
     params = c(
       fileId = file$id,
       uploadType = "multipart",
       ## We provide the metadata here even though it's overwritten below,
-      ## so that generate_request() still validates it.
+      ## so that request_generate() still validates it.
       meta
     )
   )
@@ -134,6 +135,6 @@ drive_update_multipart <- function(file, media, meta) {
     ),
     media = httr::upload_file(path = media)
   )
-  response <- make_request(request)
-  as_dribble(list(process_response(response)))
+  response <- request_make(request)
+  as_dribble(list(gargle::response_process(response)))
 }

@@ -13,10 +13,11 @@ Drive. Can be a name or path, a file id or URL marked with \code{\link[=as_id]{a
 
 \item{media}{Character, path to the local file to upload.}
 
-\item{...}{Named parameters to pass along to the Drive API. You can affect
-the metadata of the target file by specifying properties of the Files
-resource via \code{...}. See the "Request body" section of the Drive API
-docs for the associated endpoint.}
+\item{...}{Named parameters to pass along to the Drive API. Has the tidy dots
+semantics that come from using \code{\link[rlang:list2]{rlang::list2()}}. You can affect the
+metadata of the target file by specifying properties of the Files resource
+via \code{...}. Read the "Request body" section of the Drive API docs for the
+associated endpoint to learn about relevant parameters.}
 
 \item{verbose}{Logical, indicating whether to print informative messages
 (default \code{TRUE}).}
@@ -26,7 +27,8 @@ An object of class \code{\link{dribble}}, a tibble with one row per item.
 }
 \description{
 Update an existing Drive file id with new content ("media" in Drive
-API-speak), new metadata, or both.
+API-speak), new metadata, or both.  To create a new file or update existing,
+depending on whether the Drive file already exists, see \code{\link[=drive_put]{drive_put()}}.
 }
 \examples{
 \dontrun{

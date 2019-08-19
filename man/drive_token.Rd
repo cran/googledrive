@@ -2,29 +2,26 @@
 % Please edit documentation in R/drive_auth.R
 \name{drive_token}
 \alias{drive_token}
-\title{Produce Google token}
+\title{Produce configured token}
 \usage{
-drive_token(verbose = FALSE)
-}
-\arguments{
-\item{verbose}{Logical, indicating whether to print informative messages
-(default \code{TRUE}).}
+drive_token()
 }
 \value{
-a \code{request} object (an S3 class provided by \link[httr:httr]{httr})
+A \code{request} object (an S3 class provided by \link[httr:httr]{httr}).
 }
 \description{
-For internal use or for those programming around the Drive API. Produces a
-token prepared for use with \code{\link[=generate_request]{generate_request()}} and \code{\link[=build_request]{build_request()}}. Most
-users do not need to handle tokens "by hand" or, even if they need some
-control, \code{\link[=drive_auth]{drive_auth()}} is what they need. If there is no current token,
-\code{\link[=drive_auth]{drive_auth()}} is called to either load from cache or initiate OAuth2.0 flow.
-If auth has been deactivated via \code{\link[=drive_auth_config]{drive_auth_config()}}, \code{drive_token()}
+For internal use or for those programming around the Drive API.
+Returns a token pre-processed with \code{\link[httr:config]{httr::config()}}. Most users
+do not need to handle tokens "by hand" or, even if they need some
+control, \code{\link[=drive_auth]{drive_auth()}} is what they need. If there is no current
+token, \code{\link[=drive_auth]{drive_auth()}} is called to either load from cache or
+initiate OAuth2.0 flow.
+If auth has been deactivated via \code{\link[=drive_deauth]{drive_deauth()}}, \code{drive_token()}
 returns \code{NULL}.
 }
 \examples{
 \dontrun{
-req <- generate_request(
+req <- request_generate(
   "drive.files.get",
   list(fileId = "abc"),
   token = drive_token()
@@ -33,8 +30,8 @@ req
 }
 }
 \seealso{
-Other low-level API functions: \code{\link{generate_request}},
-  \code{\link{make_request}},
-  \code{\link{process_response}}
+Other low-level API functions: \code{\link{drive_has_token}},
+  \code{\link{request_generate}},
+  \code{\link{request_make}}
 }
 \concept{low-level API functions}

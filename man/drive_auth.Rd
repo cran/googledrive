@@ -4,60 +4,88 @@
 \alias{drive_auth}
 \title{Authorize googledrive}
 \usage{
-drive_auth(oauth_token = NULL, service_token = NULL, reset = FALSE,
-  cache = getOption("httr_oauth_cache"),
-  use_oob = getOption("httr_oob_default"), verbose = TRUE)
+drive_auth(email = gargle::gargle_oauth_email(), path = NULL,
+  scopes = "https://www.googleapis.com/auth/drive",
+  cache = gargle::gargle_oauth_cache(),
+  use_oob = gargle::gargle_oob_default(), token = NULL)
 }
 \arguments{
-\item{oauth_token}{Optional; path to an \code{.rds} file with a previously stored
-OAuth token.}
+\item{email}{Optional. Allows user to target a specific Google identity. If
+specified, this is used for token lookup, i.e. to determine if a suitable
+token is already available in the cache. If no such token is found, \code{email}
+is used to pre-select the targetted Google identity in the OAuth chooser.
+Note, however, that the email associated with a token when it's cached is
+always determined from the token itself, never from this argument. Use \code{NA}
+or \code{FALSE} to match nothing and force the OAuth dance in the browser. Use
+\code{TRUE} to allow email auto-discovery, if exactly one matching token is
+found in the cache. Defaults to the option named "gargle_oauth_email",
+retrieved by \code{\link[gargle:gargle_oauth_email]{gargle::gargle_oauth_email()}}.}
 
-\item{service_token}{Optional; a JSON string, URL, or path, giving or
-pointing to the service token file.}
+\item{path}{JSON identifying the service account, in one of the forms
+supported for the \code{txt} argument of \code{\link[jsonlite:fromJSON]{jsonlite::fromJSON()}} (typically, a
+file path or JSON string).}
 
-\item{reset}{Logical, defaults to \code{FALSE}. Set to \code{TRUE} if you want to
-forget any token previously used in this session and start afresh. Disables
-the \code{.httr-oauth} file in current working directory by renaming to
-\code{.httr-oauth-SUSPENDED}.}
+\item{scopes}{A character vector of scopes to request. Pick from those listed
+at \url{https://developers.google.com/identity/protocols/googlescopes}.
 
-\item{cache}{A logical value or a string. \code{TRUE} means to cache
-using the default cache file \code{.httr-oauth}, \code{FALSE} means
-don't cache, and \code{NA} means to guess using some sensible heuristics.
-A string means use the specified path as the cache file.}
+For certain token flows, the
+\code{"https://www.googleapis.com/auth/userinfo.email"} scope is unconditionally
+included. This grants permission to retrieve the email address associated
+with a token; gargle uses this to index cached OAuth tokens. This grants no
+permission to view or send email. It is considered a low value scope and
+does not appear on the consent screen.}
 
-\item{use_oob}{if FALSE, use a local webserver for the OAuth dance.
-Otherwise, provide a URL to the user and prompt for a validation
-code. Defaults to the of the \code{"httr_oob_default"} default,
-or \code{TRUE} if \code{httpuv} is not installed.}
+\item{cache}{Specifies the OAuth token cache. Defaults to the option named
+"gargle_oauth_cache", retrieved via \code{\link[gargle:gargle_oauth_cache]{gargle::gargle_oauth_cache()}}.}
 
-\item{verbose}{Logical, indicating whether to print informative messages
-(default \code{TRUE}).}
+\item{use_oob}{Whether to prefer "out of band" authentication. Defaults to
+the option named "gargle_oob_default", retrieved via
+\code{\link[gargle:gargle_oob_default]{gargle::gargle_oob_default()}}.}
+
+\item{token}{A token with class \link[httr:Token-class]{Token2.0} or an object of
+httr's class \code{request}, i.e. a token that has been prepared with
+\code{\link[httr:config]{httr::config()}} and has a \link[httr:Token-class]{Token2.0} in the
+\code{auth_token} component.}
 }
 \description{
-Authorize googledrive to view and manage your Drive files. By default, you
-are directed to a web browser, asked to sign in to your Google account,
-and to grant googledrive (the tidyverse, actually) permission to operate on
-your behalf with Google Drive. By default, these user credentials are cached
-in a file named \code{.httr-oauth} in the current working directory, from where
-they can be automatically refreshed, as necessary.
+Authorize googledrive to view and manage your Drive files. This function is a
+wrapper around \code{\link[gargle:token_fetch]{gargle::token_fetch()}}.
+
+By default, you are directed to a web browser, asked to sign in to your
+Google account, and to grant googledrive permission to operate on your
+behalf with Google Drive. By default, these user credentials are cached in a
+folder below your home directory, \code{~/.R/gargle/gargle-oauth}, from where
+they can be automatically refreshed, as necessary. Storage at the user
+level means the same token can be used across multiple projects and
+tokens are less likely to be synced to the cloud by accident.
+
+If you are interacting with R from a web-based platform, like RStudio
+Server or Cloud, you need to use a variant of this flow, known as
+out-of-band auth ("oob"). If this does not happen automatically, you
+can request it yourself with \code{use_oob = TRUE} or, more persistently, by
+setting an option via \code{options(gargle_oob_default = TRUE)}.
 }
 \details{
-Most users, most of the time, do not need to call \code{drive_auth()} explicitly
--- it is triggered by the first action that requires authorization. Even when
-called, the default arguments will often suffice. However, when necessary,
-this function allows the user to
+Most users, most of the time, do not need to call \code{drive_auth()}
+explicitly -- it is triggered by the first action that requires
+authorization. Even when called, the default arguments often suffice.
+However, when necessary, this function allows the user to explicitly:
 \itemize{
-\item force the adoption of a new token, via \code{reset = TRUE}
-\item retrieve current token, e.g., for storage to an \code{.rds} file
-\item put a pre-existing OAuth or service account token into force
-\item prevent the caching of new, interactively-obtained credentials in
-\code{.httr-oauth}
+\item Declare which Google identity to use, via an email address. If there
+are multiple cached tokens, this can clarify which one to use. It can
+also force googledrive to switch from one identity to another. If
+there's no cached token for the email, this triggers a return to the
+browser to choose the identity and give consent.
+\item Use a service account token.
+\item Bring their own \link[httr:Token-class]{Token2.0}.
+\item Specify non-default behavior re: token caching and out-of-bound
+authentication.
 }
 
-For even deeper control over auth, use \code{\link[=drive_auth_config]{drive_auth_config()}} to use your own
-OAuth app or API key. \code{\link[=drive_auth_config]{drive_auth_config()}} also allows you to
-deactivate auth, sending only an API key in requests, which works if you
-only need to access public data.
+For details on the many ways to find a token, see
+\code{\link[gargle:token_fetch]{gargle::token_fetch()}}. For deeper control over auth, use
+\code{\link[=drive_auth_configure]{drive_auth_configure()}} to bring your own OAuth app or API key.
+Read more about gargle options, see \link[gargle:gargle_options]{gargle::gargle_options}.
 }
 \examples{
 \dontrun{
@@ -65,25 +93,28 @@ only need to access public data.
 ## otherwise, go to browser for authentication and authorization
 drive_auth()
 
-## force a new oauth token to be obtained
-drive_auth(reset = TRUE)
+## see user associated with current token
+drive_user()
 
-## store token in an object and then to file
-ttt <- drive_auth()
-saveRDS(ttt, "ttt.rds")
+## force use of a token associated with a specific email
+drive_auth(email = "jenny@example.com")
+drive_user()
 
-## load a pre-existing token
-drive_auth("ttt.rds") # from .rds file
+## force a menu where you can choose from existing tokens or
+## choose to get a new one
+drive_auth(email = NA)
+
+## use a 'read only' scope, so it's impossible to edit or delete files
+drive_auth(
+  scopes = "https://www.googleapis.com/auth/drive.readonly"
+)
 
 ## use a service account token
-drive_auth(service_token = "foofy-83ee9e7c9c48.json")
+drive_auth(path = "foofy-83ee9e7c9c48.json")
 }
 }
 \seealso{
-More detail is available from
-\href{https://developers.google.com/identity/protocols/OAuth2InstalledApp}{Using OAuth 2.0 for Installed Applications}
-
-Other auth functions: \code{\link{drive_auth_config}},
+Other auth functions: \code{\link{drive_auth_configure}},
   \code{\link{drive_deauth}}
 }
 \concept{auth functions}

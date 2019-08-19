@@ -55,7 +55,7 @@ drive_toggle_trash <- function(file, trash, verbose = TRUE) {
 }
 
 toggle_trash_one <- function(id, trash = TRUE) {
-  request <- generate_request(
+  request <- request_generate(
     endpoint = "drive.files.update",
     params = list(
       fileId = id,
@@ -63,8 +63,8 @@ toggle_trash_one <- function(id, trash = TRUE) {
       fields = "*"
     )
   )
-  response <- make_request(request, encode = "json")
-  proc_res <- process_response(response)
+  response <- request_make(request, encode = "json")
+  proc_res <- gargle::response_process(response)
   as_dribble(list(proc_res))
 }
 
@@ -90,11 +90,17 @@ drive_empty_trash <- function(verbose = TRUE) {
     if (verbose) message("Your trash was already empty.")
     return(invisible(TRUE))
   }
-  del <- drive_rm(files, verbose = FALSE)
+  request <- request_generate(endpoint = "drive.files.emptyTrash")
+  response <- request_make(request)
+  success <- gargle::response_process(response)
   if (verbose) {
-    message_glue(
-      "{sum(del)} file(s) deleted from your Google Drive trash."
-    )
+    if (success) {
+      message_glue(
+        "{nrow(files)} file(s) deleted from your Google Drive trash."
+      )
+    } else {
+      message_glue("Empty trash appears to have failed.")
+    }
   }
-  return(invisible(TRUE))
+  invisible(success)
 }

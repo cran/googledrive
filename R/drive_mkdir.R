@@ -8,11 +8,9 @@
 #'
 #' @param name Name for the new folder or, optionally, a path that specifies
 #'   an existing parent folder, as well as the new name.
-#' @param parent Target destination for the new folder, i.e. a folder or a Team
-#'   Drive. Can be given as an actual path (character), a file id or URL marked
-#'   with [as_id()], or a [`dribble`]. Defaults to your "My Drive" root folder.
-#' @template dots-metadata
-#' @template verbose
+#' @inheritParams drive_create
+#' @param parent DEPRECATED. Use the `path` argument for this now, which is more
+#'   consistent with other functions in googledrive.
 #'
 #' @template dribble-return
 #' @export
@@ -26,68 +24,44 @@
 #' purrr::pluck(jkl, "drive_resource", 1, "starred")
 #'
 #' ## Another way to create folder 'mno' in folder 'ghi'
-#' drive_mkdir("mno", parent = "ghi")
+#' drive_mkdir("mno", path = "ghi")
 #'
 #' ## Yet another way to create a folder named 'pqr' in folder 'ghi',
 #' ## this time with parent folder stored in a dribble,
 #' ## and setting the new folder's description
-#' pqr <- drive_mkdir("pqr", parent = ghi, description = "I am a folder")
+#' pqr <- drive_mkdir("pqr", path = ghi, description = "I am a folder")
 #'
 #' ## Did we really set the description? YES
 #' purrr::pluck(pqr, "drive_resource", 1, "description")
+#'
+#' ## `overwrite = FALSE` errors if something already exists at target filepath
+#' ## THIS WILL ERROR!
+#' drive_create("name-squatter", path = ghi)
+#' drive_mkdir("name-squatter", path = ghi, overwrite = FALSE)
+#'
+#' ## `overwrite = TRUE` moves the existing item to trash, then proceeds
+#' drive_mkdir("name-squatter", path = ghi, overwrite = TRUE)
 #'
 #' ## clean up
 #' drive_rm(ghi)
 #' }
 drive_mkdir <- function(name,
-                        parent = NULL,
+                        path = NULL,
                         ...,
+                        overwrite = NA,
+                        parent = "DEPRECATED",
                         verbose = TRUE) {
-  stopifnot(is_string(name))
-
-  ## wire up to the conventional 'path' and 'name' pattern used elsewhere
-  if (is.null(parent)) {
-    path <- name
-    name <- NULL
-  } else {
+  if (!missing(parent)) {
+    warning_glue("`parent` is deprecated as of v1.0.0, use `path` now")
     path <- parent
   }
 
-  if (is_path(path)) {
-    if (is.null(name)) {
-      path <- strip_slash(path)
-    }
-    path_parts <- partition_path(path, maybe_name = is.null(name))
-    path <- path_parts$parent
-    name <- name %||% path_parts$name
-  }
-
-  params <- toCamel(list(...))
-  params[["name"]] <- name
-  params[["fields"]] <- params[["fields"]] %||% "*"
-  params[["mimeType"]] <- "application/vnd.google-apps.folder"
-
-  if (!is.null(path)) {
-    path <- as_parent(path)
-    params[["parents"]] <- list(path[["id"]])
-  }
-
-  request <- generate_request(
-    endpoint = "drive.files.create",
-    params = params
+  drive_create(
+    name = name,
+    path = path,
+    type = "application/vnd.google-apps.folder",
+    ...,
+    overwrite = overwrite,
+    verbose = verbose
   )
-  response <- make_request(request, encode = "json")
-  proc_res <- process_response(response)
-
-  out <- as_dribble(list(proc_res))
-
-  success <- out$name == name
-  if (verbose) {
-    new_path <- paste0(append_slash(path$name), out$name)
-    message_glue(
-      "\nFolder {if (success) '' else 'NOT '}created:\n",
-      "  * {new_path}"
-    )
-  }
-  invisible(out)
 }

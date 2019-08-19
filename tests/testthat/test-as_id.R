@@ -6,7 +6,7 @@ if (FALSE) {
   ## see also test-dplyr-compatbility.R
   saveRDS(
     drive_find(n_max = 10),
-    rprojroot::find_testthat_root_file("test-files/just_a_dribble.rds")
+    test_file("just_a_dribble.rds")
   )
 }
 
@@ -26,7 +26,7 @@ test_that("as_id() errors for unanticipated input", {
 
 test_that("as_id() returns non-URL character strings as ids", {
   expect_s3_class(as_id(c("123", "456")), "drive_id")
-  expect_identical(as_id(c("123", "456"))[1:2], c("123", "456"))
+  expect_identical(unclass(as_id(c("123", "456"))), c("123", "456"))
 })
 
 test_that("as_id() extracts ids from Drive URLs but not other URLs", {
@@ -55,13 +55,11 @@ test_that("as_id() extracts ids from Drive URLs but not other URLs", {
 
   ## properly recognizes a non-conforming URL
   x <- "http://example.com"
-  expect_identical(as_id(x)[1], NA_character_)
+  expect_identical(unclass(as_id(x)), NA_character_)
 })
 
 test_that("as_id() works with dribble and dribble-ish data frames", {
-  x <- readRDS(
-    rprojroot::find_testthat_root_file("test-files/just_a_dribble.rds")
-  )
+  x <- readRDS(test_file("just_a_dribble.rds"))
 
   expect_s3_class(as_id(x), "drive_id")
   expect_identical(unclass(as_id(x)), x$id)

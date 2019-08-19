@@ -1,5 +1,7 @@
 isFALSE <- function(x) identical(x, FALSE)
 
+is_toggle <- function(x) length(x) == 1L && is.logical(x)
+
 last <- function(x) x[length(x)]
 
 sq <- function(x) glue::single_quote(x)
@@ -9,7 +11,9 @@ trim_ws <- function(x) {
   sub("\\s*$", "", sub("^\\s*", "", x))
 }
 
-and <- function(x) glue_collapse(x, sep = " and ")
+# https://developers.google.com/drive/api/v3/search-shareddrives#query_multiple_terms_with_parentheses
+parenthesize <- function(x) glue("({x})")
+and <- function(x) glue_collapse(parenthesize(x), sep = " and ")
 or <- function(x) glue_collapse(x, sep = " or ")
 
 ## put a column into a tibble in the REST sense: "create or update"
@@ -80,7 +84,6 @@ warning_glue_data <- function(..., .sep = "", .envir = parent.frame(),
 
 warning_collapse <- function(x) warning(glue_collapse(x, sep = "\n"))
 
-
 ## removes last abs(n) elements
 crop <- function(x, n = 6L) if (n == 0) x else utils::head(x, -1 * abs(n))
 
@@ -121,4 +124,29 @@ glue_collapse <- function(x, sep = "", width = Inf, last = "") {
   } else {
     utils::getFromNamespace("collapse", "glue")(x = x, sep = sep, width = width, last = last)
   }
+}
+
+## partition a parameter list into two parts, using names to identify
+## components destined for the second part
+## example input:
+# partition_params(
+#   list(a = "a", b = "b", c = "c", d = "d"),
+#   c("b", "c")
+# )
+## example output:
+# list(
+#   unmatched = list(a = "a", d = "d"),
+#   matched = list(b = "b", c = "c")
+# )
+partition_params <- function(input, nms_to_match) {
+  out <- list(
+    unmatched = input,
+    matched = list()
+  )
+  if (length(nms_to_match) && length(input)) {
+    m <- names(out$unmatched) %in% nms_to_match
+    out$matched <- out$unmatched[m]
+    out$unmatched <- out$unmatched[!m]
+  }
+  out
 }

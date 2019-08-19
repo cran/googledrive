@@ -41,22 +41,22 @@ team_drive_update <- function(team_drive, ..., verbose = TRUE) {
     stop_collapse(c("Can't update multiple Team Drives at once:", team_drive))
   }
 
-  meta <- toCamel(list(...))
+  meta <- toCamel(rlang::list2(...))
   if (length(meta) == 0) {
     if (verbose) message("No updates specified.")
     return(invisible(team_drive))
   }
 
   meta$fields <- meta$fields %||% "*"
-  request <- generate_request(
+  request <- request_generate(
     endpoint = "drive.teamdrives.update",
     params = c(
       teamDriveId = as_id(team_drive),
       meta
     )
   )
-  response <- make_request(request, encode = "json")
-  out <- as_dribble(list(process_response(response)))
+  response <- request_make(request, encode = "json")
+  out <- as_dribble(list(gargle::response_process(response)))
 
   if (verbose) {
     message_glue("\nTeam Drive updated:\n  * {out$name}: {out$id}")

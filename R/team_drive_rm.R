@@ -50,10 +50,10 @@ team_drive_rm <- function(team_drive = NULL, verbose = TRUE) {
 }
 
 delete_one_team_drive <- function(id) {
-  request <- generate_request(
+  request <- request_generate(
     endpoint = "drive.teamdrives.delete",
     params = list(teamDriveId = id)
   )
-  response <- make_request(request)
-  process_response(response)
+  response <- request_make(request)
+  gargle::response_process(response)
 }

@@ -19,9 +19,9 @@
 #'
 #' @param path Character vector of path(s) to get. Use a trailing slash to
 #'   indicate explicitly that a path is a folder, which can disambiguate if
-#'   there is a file of the same name (yes this is possible on Drive!). A
-#'   character vector marked with [as_id()] is treated as if it was provided via
-#'   the `id` argument.
+#'   there is a file of the same name (yes this is possible on Drive!). If
+#'   `path` appears to contain Drive URLs or is explicitly marked with
+#'   [as_id()], it is treated as if it was provided via the `id` argument.
 #' @param id Character vector of Drive file ids or URLs (it is first processed
 #'   with [as_id()]). If both `path` and `id` are non-`NULL`, `id` is silently
 #'   ignored.
@@ -51,6 +51,12 @@
 #' drive_get(as_id("abcdefgeh123456789"))
 #' drive_get(id = c("abcdefgh123456789", "jklmnopq123456789"))
 #'
+#' ## apply to a browser URL for, e.g., a Google Sheet
+#' my_url <- "https://docs.google.com/spreadsheets/d/FILE_ID/edit#gid=SHEET_ID")
+#' drive_get(my_url)
+#' drive_get(as_id(my_url))
+#' drive_get(id = my_url)
+#'
 #' ## access the Team Drive named "foo"
 #' ## team_drive params must be specified if getting by path
 #' foo <- team_drive_get("foo")
@@ -67,59 +73,41 @@ drive_get <- function(path = NULL,
                       corpus = NULL,
                       verbose = TRUE) {
   if (length(path) + length(id) == 0) return(dribble_with_path())
+  stopifnot(is.null(path) || is.character(path))
+  stopifnot(is.null(id) || is.character(id))
+
+  if (!is.null(path) && any(is_drive_url(path))) {
+    path <- as_id(path)
+  }
 
   if (!is.null(path) && inherits(path, "drive_id")) {
     id <- path
     path <- NULL
   }
 
-  if (!is.null(path)) {
-    stopifnot(is_path(path))
-    return(dribble_from_path(path, team_drive, corpus))
+  if (is.null(path)) {
+    as_dribble(purrr::map(as_id(id), get_one_file))
+  } else {
+    dribble_from_path(path, team_drive, corpus)
   }
-
-  stopifnot(is.character(id))
-  as_dribble(purrr::map(as_id(id), get_one_id))
 }
 
-get_one_id <- function(id) {
+get_one_file <- function(id) {
   ## when id = "", drive.files.get actually becomes a call to drive.files.list
   ## and, therefore, returns 100 files by default ... don't let that happen
   if (!isTRUE(nzchar(id, keepNA = TRUE))) {
     stop_glue("File ids must not be NA and cannot be the empty string.")
   }
-  request <- generate_request(
+  request <- request_generate(
     endpoint = "drive.files.get",
     params = list(
       fileId = id,
       fields = "*"
     )
   )
-  response <- make_request(request)
-  process_response(response)
+  response <- request_make(request)
+  gargle::response_process(response)
 }
-
-drive_path_exists <- function(path, verbose = TRUE) {
-  stopifnot(is_path(path))
-  if (length(path) == 0) return(logical(0))
-  stopifnot(length(path) == 1)
-  some_files(drive_get(path = path))
-}
-
-confirm_clear_path <- function(path, name) {
-  if (is.null(name) &&
-    !has_slash(path) &&
-    drive_path_exists(append_slash(path))) {
-    stop_glue(
-      "Unclear if `path` specifies parent folder or full path\n",
-      "to the new file, including its name. ",
-      "See ?as_dribble() for details."
-    )
-  }
-}
-
-root_folder <- function() drive_get(id = "root")
-root_id <- function() root_folder()$id
 
 dribble_with_path <- function() {
   put_column(dribble(), nm = "path", val = character(), .after = "name")

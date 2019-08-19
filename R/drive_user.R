@@ -20,7 +20,7 @@
 #' user[["permissionId"]]
 #' }
 drive_user <- function(verbose = TRUE) {
-  if (!token_available(verbose = verbose)) {
+  if (!drive_has_token()) {
     if (verbose) {
       message("Not logged in as any specific Google user.")
     }
@@ -35,7 +35,7 @@ print.drive_user <- function(x, ...) {
   cat(
     c(
       "Logged in as:",
-      glue("  * displayName: {x[['displayName']]}"),
+      glue("  *  displayName: {x[['displayName']]}"),
       glue("  * emailAddress: {x[['emailAddress']]}")
     ),
     sep = "\n"

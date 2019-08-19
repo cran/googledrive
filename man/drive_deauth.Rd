@@ -4,27 +4,30 @@
 \alias{drive_deauth}
 \title{Suspend authorization}
 \usage{
-drive_deauth(clear_cache = TRUE, verbose = TRUE)
-}
-\arguments{
-\item{clear_cache}{logical indicating whether to disable the
-\code{.httr-oauth} file in working directory, if such exists, by renaming
-to \code{.httr-oauth-SUSPENDED}}
-
-\item{verbose}{Logical, indicating whether to print informative messages
-(default \code{TRUE}).}
+drive_deauth()
 }
 \description{
-Suspend googledrive's authorization to place requests to the Drive API on
-behalf of the authenticated user.
+Put googledrive into a de-authorized state. Instead of sending a token,
+googledrive will send an API key. This can be used to access public
+resources for which no Google sign-in is required. This is handy for using
+googledrive in a non-interactive setting to make requests that do not
+require a token. It will prevent the attempt to obtain a token
+interactively in the browser. The user can configure their own API key
+via \code{\link[=drive_auth_configure]{drive_auth_configure()}} and retrieve that key via
+\code{\link[=drive_api_key]{drive_api_key()}}.
+In the absence of a user-configured key, a built-in default key is used.
 }
 \examples{
 \dontrun{
 drive_deauth()
+drive_user()
+public_file <-
+  drive_get(as_id("1Hj-k7NpPSyeOR3R7j4KuWnru6kZaqqOAE8_db5gowIM"))
+drive_download(public_file)
 }
 }
 \seealso{
-Other auth functions: \code{\link{drive_auth_config}},
+Other auth functions: \code{\link{drive_auth_configure}},
   \code{\link{drive_auth}}
 }
 \concept{auth functions}
