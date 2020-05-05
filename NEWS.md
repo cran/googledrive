@@ -1,3 +1,17 @@
+# googledrive 1.0.1
+
+Patch release to modify a test for compatibility with an upcoming release of gargle.
+
+`drive_share()` gains awareness of the `"fileOrganizer"` role (#302).
+
+Better handling of filenames that include characters that have special meaning in a regular expression (#292).
+
+`drive_find()` explicitly checks for and eliminates duplicate records for a file ID, guarding against repetition in the paginated results returned by the API. It would seem that this should never happen, but there is some indication that it does. (#272, #277, #279, #281)
+
+`drive_share_anyone()` is a new convenience wrapper that makes a file readable by "anyone with a link".
+
+`as_tibble()` method for `dribble` objects now passes `...` through, which could apply, for example, to tibble's `.name_repair` argument.
+
 # googledrive 1.0.0
 
 The release of version 1.0.0 marks two events:
@@ -117,7 +131,7 @@ Existence checks based on filepath (or name) can be expensive. This is why the d
 
 Sometimes you have a file you will repeatedly send to Drive, i.e. the first time you run an analysis, you create the file and, when you re-run it, you update the file. Previously this was hard to express with googledrive.
 
-`drive_put()` is useful here and refers to the HTTP verb `PUT`: create the thing if it doesn't exist or, if it does, replace its contents. A good explanation of `PUT` is [RESTful API Design — PUT vs PATCH](https://medium.com/backticks-tildes/restful-api-design-put-vs-patch-4a061aa3ed0b)).
+`drive_put()` is useful here and refers to the HTTP verb `PUT`: create the thing if it doesn't exist or, if it does, replace its contents. A good explanation of `PUT` is [RESTful API Design — PUT vs PATCH](https://medium.com/backticks-tildes/restful-api-design-put-vs-patch-4a061aa3ed0b).
 
 In pseudo-code, here's the basic idea of `drive_put()`:
 

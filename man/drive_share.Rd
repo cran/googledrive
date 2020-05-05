@@ -2,11 +2,18 @@
 % Please edit documentation in R/drive_share.R
 \name{drive_share}
 \alias{drive_share}
+\alias{drive_share_anyone}
 \title{Share Drive files}
 \usage{
-drive_share(file, role = c("reader", "commenter", "writer", "owner",
-  "organizer"), type = c("user", "group", "domain", "anyone"), ...,
-  verbose = TRUE)
+drive_share(
+  file,
+  role = c("reader", "commenter", "writer", "fileOrganizer", "owner", "organizer"),
+  type = c("user", "group", "domain", "anyone"),
+  ...,
+  verbose = TRUE
+)
+
+drive_share_anyone(file, verbose = TRUE)
 }
 \arguments{
 \item{file}{Something that identifies the file(s) of interest on your Google
@@ -17,6 +24,7 @@ ids or URLs marked with \code{\link[=as_id]{as_id()}}, or a \code{\link{dribble}
 \itemize{
 \item organizer (applies only to Team Drives)
 \item owner
+\item fileOrganizer
 \item writer
 \item commenter
 \item reader
@@ -45,6 +53,9 @@ An object of class \code{\link{dribble}}, a tibble with one row per item.
 Grant individuals or other groups access to files, including permission to
 read, comment, or edit. The returned \code{\link{dribble}} will have extra columns,
 \code{shared} and \code{permissions_resource}. Read more in \code{\link[=drive_reveal]{drive_reveal()}}.
+
+\code{drive_share_anyone()} is a convenience wrapper for a common special case:
+"make this \code{file} readable by 'anyone with a link'".
 }
 \examples{
 \dontrun{
@@ -75,14 +86,21 @@ file <- file \%>\%
 ## Let anyone read the file
 file <- file \%>\%
   drive_share(role = "reader", type = "anyone")
+## Single-purpose wrapper function for this
+drive_share_anyone(file)
 
 ## Clean up
 drive_rm(file)
 }
 }
 \seealso{
-Wraps the \code{permissions.update} endpoint:
+Wraps the \code{permissions.create} endpoint:
 \itemize{
 \item \url{https://developers.google.com/drive/v3/reference/permissions/create}
+}
+
+Drive roles and permissions are described here:
+\itemize{
+\item \url{https://developers.google.com/drive/api/v3/ref-roles}
 }
 }

@@ -10,8 +10,7 @@ request_make(x, ...)
 
 do_request(x, ...)
 
-do_paginated_request(x, ..., n_max = Inf, n = function(res) 1,
-  verbose = TRUE)
+do_paginated_request(x, ..., n_max = Inf, n = function(res) 1, verbose = TRUE)
 }
 \arguments{
 \item{x}{List, holding the components for an HTTP request, presumably created
@@ -48,9 +47,9 @@ wrappers that facilitate common tasks, such as uploading or downloading Drive
 files. The functions here are intended for internal use and for programming
 around the Drive API. Three functions are documented here:
 \itemize{
-\item \code{request_make()} does the bare minimum: just calls an HTTP method, only
-adding the googledrive user agent. Typically the input is created with
-\code{\link[=request_generate]{request_generate()}} and the output is processed with
+\item \code{request_make()} does the bare minimum: calls \code{\link[gargle:request_make]{gargle::request_make()}},
+only adding the googledrive user agent. Typically the input is created
+with \code{\link[=request_generate]{request_generate()}} and the output is processed with
 \code{\link[gargle:response_process]{gargle::response_process()}}.
 \item \code{do_request()} is simply
 \code{gargle::response_process(request_make(x, ...))}. It exists only because
@@ -90,7 +89,9 @@ do_paginated_request(req, n_max = 1)
 }
 }
 \seealso{
-Other low-level API functions: \code{\link{drive_has_token}},
-  \code{\link{drive_token}}, \code{\link{request_generate}}
+Other low-level API functions: 
+\code{\link{drive_has_token}()},
+\code{\link{drive_token}()},
+\code{\link{request_generate}()}
 }
 \concept{low-level API functions}
