@@ -1,14 +1,13 @@
-context("Find files")
-
 # ---- nm_fun ----
-me_ <- nm_fun("TEST-drive-find")
-nm_ <- nm_fun("TEST-drive-find", NULL)
+me_ <- nm_fun("TEST-drive_find")
+nm_ <- nm_fun("TEST-drive_find", user_run = FALSE)
 
 # ---- clean ----
 if (CLEAN) {
   drive_trash(c(
     nm_("find-me"),
-    nm_("this-should-not-exist")
+    nm_("this-should-not-exist"),
+    nm_("copy-me")
   ))
 }
 
@@ -29,7 +28,7 @@ test_that("drive_find() passes q", {
   ## this should find at least 1 folder (find-me), and all files found should
   ## be folders
   out <- drive_find(q = "mimeType='application/vnd.google-apps.folder'")
-  mtypes <- purrr::map_chr(out$drive_resource, "mimeType")
+  mtypes <- map_chr(out$drive_resource, "mimeType")
   expect_true(all(mtypes == "application/vnd.google-apps.folder"))
 })
 
@@ -40,7 +39,7 @@ test_that("drive_find() `type` filters for MIME type", {
   ## this should find at least 1 folder (find-me), and all files found should
   ## be folders
   out <- drive_find(type = "folder")
-  mtypes <- purrr::map_chr(out$drive_resource, "mimeType")
+  mtypes <- map_chr(out$drive_resource, "mimeType")
   expect_true(all(mtypes == "application/vnd.google-apps.folder"))
 })
 
@@ -55,9 +54,9 @@ test_that("drive_find() filters for the regex in `pattern`", {
 })
 
 test_that("drive_find() errors for nonsense in `n_max`", {
-  expect_error(drive_find(n_max = "a"))
-  expect_error(drive_find(n_max = 1:3))
-  expect_error(drive_find(n_max = -2))
+  expect_snapshot(drive_find(n_max = "a"), error = TRUE)
+  expect_snapshot(drive_find(n_max = 1:3), error = TRUE)
+  expect_snapshot(drive_find(n_max = -2), error = TRUE)
 })
 
 test_that("drive_find() returns early if n_max < 1", {
@@ -78,9 +77,7 @@ test_that("drive_find() tolerates specification of pageSize", {
   skip_if_no_token()
   skip_if_offline()
 
-  expect_silent({
-    out <- drive_find(n_max = 10, pageSize = 5, verbose = FALSE)
-  })
+  out <- drive_find(n_max = 10, pageSize = 5)
   expect_lte(nrow(out), 10)
   expect_lt(anyDuplicated(out$id), 1)
 })
@@ -117,7 +114,7 @@ test_that("marshal_q_clauses() handles multiple q and vector q", {
 test_that("trashed argument works", {
   skip_if_no_token()
   skip_if_offline()
-  on.exit(drive_rm(drive_find(me_("trashed"), trashed = NA)))
+  defer_drive_rm(drive_find(me_("trashed"), trashed = NA))
 
   trashed <- drive_cp(nm_("copy-me"), name = me_("trashed"))
   drive_trash(trashed)

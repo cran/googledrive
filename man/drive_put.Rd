@@ -4,26 +4,39 @@
 \alias{drive_put}
 \title{PUT new media into a Drive file}
 \usage{
-drive_put(media, path = NULL, name = NULL, ..., type = NULL, verbose = TRUE)
+drive_put(
+  media,
+  path = NULL,
+  name = NULL,
+  ...,
+  type = NULL,
+  verbose = deprecated()
+)
 }
 \arguments{
 \item{media}{Character, path to the local file to upload.}
 
 \item{path}{Specifies target destination for the new file on Google
-Drive. Can be an actual path (character), a file id marked with \code{\link[=as_id]{as_id()}},
-or a \code{\link{dribble}}. If specified as an actual path, it is best to explicitly
-indicate if it's a folder by including a trailing slash, since it cannot
-always be worked out from the context of the call. Will default to its local name.}
+Drive. Can be an actual path (character), a file id marked with
+\code{\link[=as_id]{as_id()}}, or a \code{\link{dribble}}.
+
+If \code{path} is a shortcut to a folder, it is automatically resolved to its
+target folder.
+
+If \code{path} is given as a path (as opposed to a \code{dribble} or an id), it is
+best to explicitly indicate if it's a folder by including a trailing
+slash, since it cannot always be worked out from the context of the call.
+By default, the file is created in the current
+user's "My Drive" root folder.}
 
 \item{name}{Character, new file name if not specified as part of
-\code{path}. This will force \code{path} to be treated as a folder, even if it is
-character and lacks a trailing slash. Will default to its local name.}
+\code{path}. This will force \code{path} to be interpreted as a folder, even if it
+is character and lacks a trailing slash. Defaults to the file's local name.}
 
-\item{...}{Named parameters to pass along to the Drive API. Has the tidy dots
-semantics that come from using \code{\link[rlang:list2]{rlang::list2()}}. You can affect the
-metadata of the target file by specifying properties of the Files resource
-via \code{...}. Read the "Request body" section of the Drive API docs for the
-associated endpoint to learn about relevant parameters.}
+\item{...}{Named parameters to pass along to the Drive API. Has \link[rlang:dyn-dots]{dynamic dots} semantics. You can affect the metadata of the target file by
+specifying properties of the Files resource via \code{...}. Read the "Request
+body" section of the Drive API docs for the associated endpoint to learn
+about relevant parameters.}
 
 \item{type}{Character. If \code{type = NULL}, a MIME type is automatically
 determined from the file extension, if possible. If the source file is of a
@@ -32,29 +45,37 @@ setting \code{type} to \code{document}, \code{spreadsheet}, or \code{presentatio
 respectively. All non-\code{NULL} values for \code{type} are pre-processed with
 \code{\link[=drive_mime_type]{drive_mime_type()}}.}
 
-\item{verbose}{Logical, indicating whether to print informative messages
-(default \code{TRUE}).}
+\item{verbose}{\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#deprecated}{\figure{lifecycle-deprecated.svg}{options: alt='[Deprecated]'}}}{\strong{[Deprecated]}} This logical argument to
+individual googledrive functions is deprecated. To globally suppress
+googledrive messaging, use \code{options(googledrive_quiet = TRUE)} (the default
+behaviour is to emit informational messages). To suppress messaging in a
+more limited way, use the helpers \code{\link[=local_drive_quiet]{local_drive_quiet()}} or
+\code{\link[=with_drive_quiet]{with_drive_quiet()}}.}
 }
 \value{
-An object of class \code{\link{dribble}}, a tibble with one row per item.
+An object of class \code{\link{dribble}}, a tibble with one row per file.
 }
 \description{
-PUTs new media into a Drive file, in the HTTP sense: if the file already
-exists, we replace its content and we create a new file, otherwise. This is a
-convenience wrapper around \code{\link[=drive_upload]{drive_upload()}} and \code{\link[=drive_update]{drive_update()}}. In
-pseudo-code:\preformatted{target_filepath <- <determined from `path`, `name`, and `media`>
+PUTs new media into a Drive file, in the HTTP sense:
+\itemize{
+\item If the file already exists, we replace its content.
+\item If the file does not already exist, we create a new file.
+}
+
+This is a convenience wrapper around \code{\link[=drive_upload]{drive_upload()}} and
+\code{\link[=drive_update]{drive_update()}}. In pseudo-code:\preformatted{target_filepath <- <determined from `path`, `name`, and `media`>
 hits <- <get all Drive files at target_filepath>
 if (no hits) \{
-  drive_upload(media, path, name, type, ..., verbose)
+  drive_upload(media, path, name, type, ...)
 \} else if (exactly 1 hit) \{
-  drive_update(hit, media, ..., verbose)
+  drive_update(hit, media, ...)
 \} else \{
   ERROR
 \}
 }
 }
 \examples{
-\dontrun{
+\dontshow{if (drive_has_token()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
 # create a local file to work with
 local_file <- tempfile("drive_put_", fileext = ".txt")
 writeLines(c("beginning", "middle"), local_file)
@@ -77,5 +98,5 @@ drive_put(local_file)
 # clean-up
 drive_find("drive_put_.+[.]txt") \%>\% drive_rm()
 unlink(local_file)
-}
+\dontshow{\}) # examplesIf}
 }

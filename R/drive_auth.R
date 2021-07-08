@@ -1,10 +1,8 @@
 ## This file is the interface between googledrive and the
 ## auth functionality in gargle.
 
-.auth <- gargle::init_AuthState(
-  package     = "googledrive",
-  auth_active = TRUE
-)
+# Initialization happens in .onLoad()
+.auth <- NULL
 
 ## The roxygen comments for these functions are mostly generated from data
 ## in this list and template text maintained in gargle.
@@ -27,27 +25,26 @@ gargle_lookup_table <- list(
 #'
 #' @examples
 #' \dontrun{
-#' ## load/refresh existing credentials, if available
-#' ## otherwise, go to browser for authentication and authorization
+#' # load/refresh existing credentials, if available
+#' # otherwise, go to browser for authentication and authorization
 #' drive_auth()
 #'
-#' ## see user associated with current token
+#' # see user associated with current token
 #' drive_user()
 #'
-#' ## force use of a token associated with a specific email
+#' # force use of a token associated with a specific email
 #' drive_auth(email = "jenny@example.com")
 #' drive_user()
 #'
-#' ## force a menu where you can choose from existing tokens or
-#' ## choose to get a new one
+#' # force the OAuth web dance
 #' drive_auth(email = NA)
 #'
-#' ## use a 'read only' scope, so it's impossible to edit or delete files
+#' # use a 'read only' scope, so it's impossible to edit or delete files
 #' drive_auth(
 #'   scopes = "https://www.googleapis.com/auth/drive.readonly"
 #' )
 #'
-#' ## use a service account token
+#' # use a service account token
 #' drive_auth(path = "foofy-83ee9e7c9c48.json")
 #' }
 drive_auth <- function(email = gargle::gargle_oauth_email(),
@@ -56,6 +53,7 @@ drive_auth <- function(email = gargle::gargle_oauth_email(),
                        cache = gargle::gargle_oauth_cache(),
                        use_oob = gargle::gargle_oob_default(),
                        token = NULL) {
+  env_unbind(.googledrive, "root_folder")
   cred <- gargle::token_fetch(
     scopes = scopes,
     app = drive_oauth_app() %||% gargle::tidyverse_app(),
@@ -67,14 +65,15 @@ drive_auth <- function(email = gargle::gargle_oauth_email(),
     token = token
   )
   if (!inherits(cred, "Token2.0")) {
-    stop(
-      "Can't get Google credentials.\n",
-      "Are you running googledrive in a non-interactive session? Consider:\n",
-      "  * `drive_deauth()` to prevent the attempt to get credentials.\n",
-      "  * Call `drive_auth()` directly with all necessary specifics.\n",
-      "  * Read more in: https://gargle.r-lib.org/articles/non-interactive-auth.html",
-      call. = FALSE
-    )
+    drive_abort(c(
+      "Can't get Google credentials",
+      "i" = "Are you running googledrive in a non-interactive session? \\
+             Consider:",
+      "*" = "{.fun drive_deauth} to prevent the attempt to get credentials",
+      "*" = "Call {.fun drive_auth} directly with all necessary specifics",
+      "i" = "See gargle's \"Non-interactive auth\" vignette for more details:",
+      "i" = "{.url https://gargle.r-lib.org/articles/non-interactive-auth.html}"
+    ))
   }
   .auth$set_cred(cred)
   .auth$set_auth_active(TRUE)
@@ -99,6 +98,7 @@ drive_auth <- function(email = gargle::gargle_oauth_email(),
 drive_deauth <- function() {
   .auth$set_auth_active(FALSE)
   .auth$clear_cred()
+  env_unbind(.googledrive, "root_folder")
   invisible()
 }
 
@@ -109,15 +109,13 @@ drive_deauth <- function() {
 #'
 #' @family low-level API functions
 #' @export
-#' @examples
-#' \dontrun{
+#' @examplesIf drive_has_token()
 #' req <- request_generate(
 #'   "drive.files.get",
 #'   list(fileId = "abc"),
 #'   token = drive_token()
 #' )
 #' req
-#' }
 drive_token <- function() {
   if (isFALSE(.auth$auth_active)) {
     return(NULL)
@@ -173,7 +171,7 @@ drive_has_token <- function() {
 #' }
 #'
 #' \dontrun{
-#' ## bring your own app via JSON downloaded from Google Developers Console
+#' # bring your own app via JSON downloaded from Google Developers Console
 #' drive_auth_configure(
 #'   path = "/path/to/the/JSON/you/downloaded/from/google/dev/console.json"
 #' )
@@ -183,7 +181,7 @@ drive_has_token <- function() {
 #' drive_auth_configure(app = original_app, api_key = original_api_key)
 drive_auth_configure <- function(app, path, api_key) {
   if (!missing(app) && !missing(path)) {
-    stop("Must supply exactly one of `app` and `path`", call. = FALSE)
+    drive_abort("Must supply exactly one of {.arg app} or {.arg path}, not both")
   }
   stopifnot(missing(api_key) || is.null(api_key) || is_string(api_key))
 
@@ -211,3 +209,59 @@ drive_api_key <- function() .auth$api_key
 #' @export
 #' @rdname drive_auth_configure
 drive_oauth_app <- function() .auth$app
+
+# unexported helpers that are nice for internal use ----
+drive_auth_internal <- function(account = c("docs", "testing"),
+                                scopes = NULL) {
+  account <- match.arg(account)
+  can_decrypt <- gargle:::secret_can_decrypt("googledrive")
+  online <- !is.null(curl::nslookup("drive.googleapis.com", error = FALSE))
+  if (!can_decrypt || !online) {
+    drive_abort(
+      message = c(
+        "Auth unsuccessful:",
+        if (!can_decrypt) {
+          c("x" = "Can't decrypt the {.field {account}} service account token")
+        },
+        if (!online) {
+          c("x" = "We don't appear to be online (or maybe the Drive API is down?)")
+        }
+      ),
+      class = "googledrive_auth_internal_error",
+      can_decrypt = can_decrypt, online = online
+    )
+  }
+
+  if (!is_interactive()) local_drive_quiet()
+  filename <- glue("googledrive-{account}.json")
+  # TODO: revisit when I do PKG_scopes()
+  # https://github.com/r-lib/gargle/issues/103
+  scopes <- scopes %||% "https://www.googleapis.com/auth/drive"
+  json <- gargle:::secret_read("googledrive", filename)
+  drive_auth(scopes = scopes, path = rawToChar(json))
+  print(drive_user())
+  invisible(TRUE)
+}
+
+drive_auth_docs <- function(scopes = NULL) {
+  drive_auth_internal("docs", scopes = scopes)
+}
+
+drive_auth_testing <- function(scopes = NULL) {
+  drive_auth_internal("testing", scopes = scopes)
+}
+
+local_deauth <- function(env = parent.frame()) {
+  original_cred <- .auth$get_cred()
+  original_auth_active <- .auth$auth_active
+  drive_bullets(c("i" = "Going into deauthorized state"))
+  withr::defer(
+    drive_bullets(c("i" = "Restoring previous auth state")),
+    envir = env
+  )
+  withr::defer({
+    .auth$set_cred(original_cred)
+    .auth$set_auth_active(original_auth_active)
+  }, envir = env)
+  drive_deauth()
+}

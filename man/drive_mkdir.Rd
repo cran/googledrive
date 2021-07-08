@@ -4,28 +4,22 @@
 \alias{drive_mkdir}
 \title{Create a Drive folder}
 \usage{
-drive_mkdir(
-  name,
-  path = NULL,
-  ...,
-  overwrite = NA,
-  parent = "DEPRECATED",
-  verbose = TRUE
-)
+drive_mkdir(name, path = NULL, ..., overwrite = NA, verbose = deprecated())
 }
 \arguments{
 \item{name}{Name for the new folder or, optionally, a path that specifies
 an existing parent folder, as well as the new name.}
 
-\item{path}{Target destination for the new item, i.e. a folder or a Team
-Drive. Can be given as an actual path (character), a file id or URL marked
-with \code{\link[=as_id]{as_id()}}, or a \code{\link{dribble}}. Defaults to your "My Drive" root folder.}
+\item{path}{Target destination for the new folder, i.e. a folder or a
+shared drive. Can be given as an actual path (character), a file id or URL
+marked with \code{\link[=as_id]{as_id()}}, or a \code{\link{dribble}}. Defaults to your "My Drive" root
+folder. If \code{path} is a shortcut to a folder, it is automatically resolved
+to its target folder.}
 
-\item{...}{Named parameters to pass along to the Drive API. Has the tidy dots
-semantics that come from using \code{\link[rlang:list2]{rlang::list2()}}. You can affect the
-metadata of the target file by specifying properties of the Files resource
-via \code{...}. Read the "Request body" section of the Drive API docs for the
-associated endpoint to learn about relevant parameters.}
+\item{...}{Named parameters to pass along to the Drive API. Has \link[rlang:dyn-dots]{dynamic dots} semantics. You can affect the metadata of the target file by
+specifying properties of the Files resource via \code{...}. Read the "Request
+body" section of the Drive API docs for the associated endpoint to learn
+about relevant parameters.}
 
 \item{overwrite}{Logical, indicating whether to check for a pre-existing file
 at the targetted "filepath". The quotes around "filepath" refer to the fact
@@ -45,54 +39,58 @@ thrown if two or more pre-existing files are found.
 Note that existence checks, based on filepath, are expensive operations, i.e.
 they require additional API calls.}
 
-\item{parent}{DEPRECATED. Use the \code{path} argument for this now, which is more
-consistent with other functions in googledrive.}
-
-\item{verbose}{Logical, indicating whether to print informative messages
-(default \code{TRUE}).}
+\item{verbose}{\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#deprecated}{\figure{lifecycle-deprecated.svg}{options: alt='[Deprecated]'}}}{\strong{[Deprecated]}} This logical argument to
+individual googledrive functions is deprecated. To globally suppress
+googledrive messaging, use \code{options(googledrive_quiet = TRUE)} (the default
+behaviour is to emit informational messages). To suppress messaging in a
+more limited way, use the helpers \code{\link[=local_drive_quiet]{local_drive_quiet()}} or
+\code{\link[=with_drive_quiet]{with_drive_quiet()}}.}
 }
 \value{
-An object of class \code{\link{dribble}}, a tibble with one row per item.
+An object of class \code{\link{dribble}}, a tibble with one row per file.
 }
 \description{
 Creates a new Drive folder. To update the metadata of an existing Drive file,
 including a folder, use \code{\link[=drive_update]{drive_update()}}.
 }
 \examples{
-\dontrun{
-## Create folder named 'ghi', then another below named it 'jkl' and star it
+\dontshow{if (drive_has_token()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+# Create folder named 'ghi', then another below named it 'jkl' and star it
 ghi <- drive_mkdir("ghi")
 jkl <- drive_mkdir("ghi/jkl", starred = TRUE)
 
-## is 'jkl' really starred? YES
+# is 'jkl' really starred? YES
 purrr::pluck(jkl, "drive_resource", 1, "starred")
 
-## Another way to create folder 'mno' in folder 'ghi'
+# Another way to create folder 'mno' in folder 'ghi'
 drive_mkdir("mno", path = "ghi")
 
-## Yet another way to create a folder named 'pqr' in folder 'ghi',
-## this time with parent folder stored in a dribble,
-## and setting the new folder's description
+# Yet another way to create a folder named 'pqr' in folder 'ghi',
+# this time with parent folder stored in a dribble,
+# and setting the new folder's description
 pqr <- drive_mkdir("pqr", path = ghi, description = "I am a folder")
 
-## Did we really set the description? YES
+# Did we really set the description? YES
 purrr::pluck(pqr, "drive_resource", 1, "description")
 
-## `overwrite = FALSE` errors if something already exists at target filepath
-## THIS WILL ERROR!
+# `overwrite = FALSE` errors if something already exists at target filepath
+# THIS WILL ERROR!
 drive_create("name-squatter", path = ghi)
 drive_mkdir("name-squatter", path = ghi, overwrite = FALSE)
 
-## `overwrite = TRUE` moves the existing item to trash, then proceeds
+# `overwrite = TRUE` moves the existing item to trash, then proceeds
 drive_mkdir("name-squatter", path = ghi, overwrite = TRUE)
 
-## clean up
+# list everything inside 'ghi'
+drive_ls('ghi')
+
+# clean up
 drive_rm(ghi)
-}
+\dontshow{\}) # examplesIf}
 }
 \seealso{
 Wraps the \code{files.create} endpoint:
 \itemize{
-\item \url{https://developers.google.com/drive/v3/reference/files/create}
+\item \url{https://developers.google.com/drive/api/v3/reference/files/create}
 }
 }

@@ -10,16 +10,16 @@
 #'
 #' @seealso
 #' Wraps the `permissions.create` endpoint:
-#'   * <https://developers.google.com/drive/v3/reference/permissions/create>
+#' * <https://developers.google.com/drive/api/v3/reference/permissions/create>
 #'
 #' Drive roles and permissions are described here:
-#'   * <https://developers.google.com/drive/api/v3/ref-roles>
+#' * <https://developers.google.com/drive/api/v3/ref-roles>
 #'
 #' @template file-plural
 #' @param role Character. The role to grant. Must be one of:
-#'   * organizer (applies only to Team Drives)
-#'   * owner
-#'   * fileOrganizer
+#'   * owner (not allowed in shared drives)
+#'   * organizer (applies to shared drives)
+#'   * fileOrganizer (applies to shared drives)
 #'   * writer
 #'   * commenter
 #'   * reader
@@ -34,43 +34,39 @@
 #'   `"domain"`). Read the API docs linked below for more details.
 #' @template verbose
 #'
-#' @template dribble-return
+#' @eval return_dribble(extras = "There will be extra columns, `shared` and
+#'   `permissions_resource`.")
 #' @export
-#' @examples
-#' \dontrun{
-#' ## Upload a file to share
-#' file <- drive_upload(
-#'    drive_example("chicken.txt"),
-#'    name = "chicken-share.txt",
-#'    type = "document"
-#' )
+#' @examplesIf drive_has_token()
+#' # Create a file to share
+#' file <- drive_example_remote("chicken_doc") %>%
+#'   drive_cp(name = "chicken-share.txt")
 #'
-#' ## Let a specific person comment
+#' # Let a specific person comment
 #' file <- file %>%
 #'   drive_share(
 #'     role = "commenter",
 #'     type = "user",
 #'     emailAddress = "susan@example.com"
-#' )
+#'   )
 #'
-#' ## Let a different specific person edit and customize the email notification
+#' # Let a different specific person edit and customize the email notification
 #' file <- file %>%
 #'   drive_share(
 #'     role = "writer",
 #'     type = "user",
 #'     emailAddress = "carol@example.com",
 #'     emailMessage = "Would appreciate your feedback on this!"
-#' )
+#'   )
 #'
-#' ## Let anyone read the file
+#' # Let anyone read the file
 #' file <- file %>%
 #'   drive_share(role = "reader", type = "anyone")
-#' ## Single-purpose wrapper function for this
+#' # Single-purpose wrapper function for this
 #' drive_share_anyone(file)
 #'
-#' ## Clean up
+#' # Clean up
 #' drive_rm(file)
-#' }
 drive_share <- function(file,
                         role = c(
                           "reader", "commenter", "writer",
@@ -78,40 +74,44 @@ drive_share <- function(file,
                         ),
                         type = c("user", "group", "domain", "anyone"),
                         ...,
-                        verbose = TRUE) {
+                        verbose = deprecated()) {
+  warn_for_verbose(verbose)
+
   role <- match.arg(role)
   type <- match.arg(type)
   file <- as_dribble(file)
   file <- confirm_some_files(file)
 
-  params <- toCamel(rlang::list2(...))
+  params <- toCamel(list2(...))
   params[["role"]] <- role
   params[["type"]] <- type
   params[["fields"]] <- "*"
   ## this resource pertains only to the affected permission
-  permission_out <- purrr::map(
+  permission_out <- map(
     file$id,
     drive_share_one,
-    params = params,
-    verbose = verbose
+    params = params
   )
 
-  if (verbose) {
-    ok <- purrr::map_chr(permission_out, "type") == type
-    if (any(ok)) {
-      successes <- glue_data(file[ok, ], "  * {name}: {id}")
-      message_collapse(c(
-        "Permissions updated",
-        glue("  * role = {role}"),
-        glue("  * type = {type}"),
-        "For files:",
-        successes
-      ))
-    }
-    if (any(!ok)) {
-      failures <- glue_data(file[ok, ], "  * {name}: {id}")
-      message_collapse(c("Permissions were NOT updated:", failures))
-    }
+  ok <- map_chr(permission_out, "type") == type
+  if (any(ok)) {
+    successes <- file[ok, ]
+    drive_bullets(c(
+      "Permissions updated:",
+      "*" = "role = {role}",
+      "*" = "type = {type}",
+      "For file{?s}:{cli::qty(nrow(successes))}",
+      bulletize(gargle_map_cli(successes))
+    ))
+  }
+  # I'm not sure this ever comes up IRL?
+  # Is it even possible that permission update fails but there's no error?
+  if (any(!ok)) {
+    failures <- file[!ok, ]
+    drive_bullets(c(
+      "Permissions were NOT updated for file{?s}:{cli::qty(nrow(failures))}",
+      bulletize(gargle_map_cli(failures))
+    ))
   }
 
   ## refresh drive_resource, get full permissions_resource
@@ -121,32 +121,31 @@ drive_share <- function(file,
 
 #' @rdname drive_share
 #' @export
-drive_share_anyone <- function(file, verbose = TRUE) {
-  drive_share(
-    file = file,
-    role = "reader", type = "anyone",
-    verbose = verbose)
+drive_share_anyone <- function(file, verbose = deprecated()) {
+  warn_for_verbose(verbose)
+  drive_share(file = file, role = "reader", type = "anyone")
 }
 
-drive_share_one <- function(id, params, verbose) {
+drive_share_one <- function(id, params) {
   params[["fileId"]] <- id
   request <- request_generate(
     endpoint = "drive.permissions.create",
     params = params
   )
-  response <- request_make(request, encode = "json")
+  response <- request_make(request)
   gargle::response_process(response)
 }
 
 drive_reveal_permissions <- function(file) {
   confirm_dribble(file)
-  permissions_resource <- purrr::map(file$id, list_permissions_one)
+  permissions_resource <- map(file$id, list_permissions_one)
+  # TODO: revisit this in light of Team Drives --> shared drives
   ## can't use promote() here (yet) because Team Drive files don't have
   ## `shared` and their NULLs would force `shared` to be a list-column
   file <- put_column(
     file,
     nm = "shared",
-    val = purrr::map_lgl(file$drive_resource, "shared", .default = NA),
+    val = map_lgl(file$drive_resource, "shared", .default = NA),
     .after = "name"
   )
   put_column(
@@ -164,11 +163,12 @@ list_permissions_one <- function(id) {
       fields = "*"
     )
   )
-  ## TO DO: we aren't dealing with the fact that this endpoint is paginated
-  ## for Team Drives
-  response <- request_make(request, encode = "json")
-  ## if capabilities/canReadRevisions (present in File resource) is not true,
-  ## user will get a 403 "insufficientFilePermissions" here
+  # TODO: is this still a problem for shared drives? probably
+  # TO DO: we aren't dealing with the fact that this endpoint is paginated
+  # for Team Drives
+  response <- request_make(request)
+  # if capabilities/canReadRevisions (present in File resource) is not true,
+  # user will get a 403 "insufficientFilePermissions" here
   if (httr::status_code(response) == 403) {
     return(NULL)
   }

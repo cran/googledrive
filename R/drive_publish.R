@@ -6,7 +6,7 @@
 #' Read more in [drive_reveal()].
 #'
 #' @seealso Wraps the `revisions.update` endpoint:
-#'   * <https://developers.google.com/drive/v3/reference/revisions/update>
+#'   * <https://developers.google.com/drive/api/v3/reference/revisions/update>
 #'
 #' @template file-plural
 #' @param ... Name-value pairs to add to the API request body (see API docs
@@ -15,58 +15,57 @@
 #' specify other values.
 #' @template verbose
 #'
-#' @template dribble-return
+#' @eval return_dribble(extras = "There will be extra columns, `published` and
+#'   `revisions_resource`.")
 #' @export
-#' @examples
-#' \dontrun{
-#' ## Upload file to publish
-#' file <- drive_upload(
-#'   drive_example("chicken.csv"),
-#'   type = "spreadsheet"
-#'   )
+#' @examplesIf drive_has_token()
+#' # Create a file to publish
+#' file <- drive_example_remote("chicken_sheet") %>%
+#'   drive_cp()
 #'
-#' ## Publish file
+#' # Publish file
 #' file <- drive_publish(file)
 #' file$published
 #'
-#' ## Unpublish file
+#' # Unpublish file
 #' file <- drive_unpublish(file)
 #' file$published
 #'
-#' ## Clean up
+#' # Clean up
 #' drive_rm(file)
-#' }
-drive_publish <- function(file, ..., verbose = TRUE) {
-  drive_change_publish(file = file, publish = TRUE, ..., verbose = verbose)
+drive_publish <- function(file, ..., verbose = deprecated()) {
+  warn_for_verbose(verbose)
+  drive_change_publish(file = file, publish = TRUE, ...)
 }
 
 #' @rdname drive_publish
 #' @export
-drive_unpublish <- function(file, ..., verbose = TRUE) {
-  drive_change_publish(file = file, publish = FALSE, ..., verbose = verbose)
+drive_unpublish <- function(file, ..., verbose = deprecated()) {
+  warn_for_verbose(verbose)
+  drive_change_publish(file = file, publish = FALSE, ...)
 }
 
 drive_change_publish <- function(file,
                                  publish = TRUE,
-                                 ...,
-                                 verbose = TRUE) {
+                                 ...) {
   file <- as_dribble(file)
   file <- confirm_some_files(file)
 
   type_ok <- is_native(file)
   if (!all(type_ok)) {
-    file <- file[utils::head(which(!type_ok), 10), ]
+    file <- file[!type_ok, ]
     file <- promote(file, "mimeType")
-    bad_mime_types <- glue_data(file, "  * {name}: {mimeType}")
-    stop_collapse(c(
+    drive_abort(c(
       "Only native Google files can be published.",
-      "Files that do not qualify (or, at least, the first 10):",
-      bad_mime_types,
-      "Check out `drive_share()` to change sharing permissions."
+      "{.arg file} includes {?a/} file{?s} \\
+       with non-native MIME type{cli::qty(nrow(file))}",
+      bulletize(gargle_map_cli(file, "{.drivepath <<name>>}: {.field <<mimeType>>}")),
+      "i" = "You can use {.fun drive_share} to change a file's sharing \\
+             permissions."
     ))
   }
 
-  params <- toCamel(rlang::list2(...))
+  params <- toCamel(list2(...))
   params[["published"]] <- publish
   params[["publishAuto"]] <- params[["publishAuto"]] %||% TRUE
   params[["publishedOutsideDomain"]] <-
@@ -74,18 +73,17 @@ drive_change_publish <- function(file,
   params[["revisionId"]] <- "head"
   params[["fields"]] <- "*"
 
-  revision_resource <- purrr::map(
+  revision_resource <- map(
     file$id,
     change_publish_one,
     params = params
   )
-  if (verbose) {
-    success <- glue_data(file, "  * {name}: {id}")
-    message_collapse(c(
-      glue("Files now {if (publish) '' else 'NOT '}published:\n"),
-      success
-    ))
-  }
+  n <- nrow(file)
+  drive_bullets(c(
+    cli::pluralize(
+      "{cli::qty(n)}File{?s} now {if (publish) '' else 'NOT '}published:"),
+    bulletize(gargle_map_cli(file))
+  ))
   invisible(drive_reveal(file, "published"))
 }
 
@@ -95,17 +93,17 @@ change_publish_one <- function(id, params) {
     endpoint = "drive.revisions.update",
     params = params
   )
-  response <- request_make(request, encode = "json")
+  response <- request_make(request)
   gargle::response_process(response)
 }
 
 drive_reveal_published <- function(file) {
   confirm_dribble(file)
-  revision_resource <- purrr::map(file$id, get_publish_one)
+  revision_resource <- map(file$id, get_publish_one)
   file <- put_column(
     file,
     nm = "published",
-    val = purrr::map_lgl(revision_resource, "published", .default = FALSE),
+    val = map_lgl(revision_resource, "published", .default = FALSE),
     .after = 1
   )
   put_column(

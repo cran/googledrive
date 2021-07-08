@@ -10,27 +10,28 @@ drive_create(
   type = NULL,
   ...,
   overwrite = NA,
-  verbose = TRUE
+  verbose = deprecated()
 )
 }
 \arguments{
 \item{name}{Name for the new file or, optionally, a path that specifies
 an existing parent folder, as well as the new file name.}
 
-\item{path}{Target destination for the new item, i.e. a folder or a Team
-Drive. Can be given as an actual path (character), a file id or URL marked
-with \code{\link[=as_id]{as_id()}}, or a \code{\link{dribble}}. Defaults to your "My Drive" root folder.}
+\item{path}{Target destination for the new item, i.e. a folder or a
+shared drive. Can be given as an actual path (character), a file id or URL
+marked with \code{\link[=as_id]{as_id()}}, or a \code{\link{dribble}}. Defaults to your "My Drive" root
+folder. If \code{path} is a shortcut to a folder, it is automatically resolved
+to its target folder.}
 
 \item{type}{Character. Create a blank Google Doc, Sheet or Slides by
 setting \code{type} to \code{document}, \code{spreadsheet}, or \code{presentation},
 respectively. All non-\code{NULL} values for \code{type} are pre-processed with
 \code{\link[=drive_mime_type]{drive_mime_type()}}.}
 
-\item{...}{Named parameters to pass along to the Drive API. Has the tidy dots
-semantics that come from using \code{\link[rlang:list2]{rlang::list2()}}. You can affect the
-metadata of the target file by specifying properties of the Files resource
-via \code{...}. Read the "Request body" section of the Drive API docs for the
-associated endpoint to learn about relevant parameters.}
+\item{...}{Named parameters to pass along to the Drive API. Has \link[rlang:dyn-dots]{dynamic dots} semantics. You can affect the metadata of the target file by
+specifying properties of the Files resource via \code{...}. Read the "Request
+body" section of the Drive API docs for the associated endpoint to learn
+about relevant parameters.}
 
 \item{overwrite}{Logical, indicating whether to check for a pre-existing file
 at the targetted "filepath". The quotes around "filepath" refer to the fact
@@ -50,11 +51,15 @@ thrown if two or more pre-existing files are found.
 Note that existence checks, based on filepath, are expensive operations, i.e.
 they require additional API calls.}
 
-\item{verbose}{Logical, indicating whether to print informative messages
-(default \code{TRUE}).}
+\item{verbose}{\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#deprecated}{\figure{lifecycle-deprecated.svg}{options: alt='[Deprecated]'}}}{\strong{[Deprecated]}} This logical argument to
+individual googledrive functions is deprecated. To globally suppress
+googledrive messaging, use \code{options(googledrive_quiet = TRUE)} (the default
+behaviour is to emit informational messages). To suppress messaging in a
+more limited way, use the helpers \code{\link[=local_drive_quiet]{local_drive_quiet()}} or
+\code{\link[=with_drive_quiet]{with_drive_quiet()}}.}
 }
 \value{
-An object of class \code{\link{dribble}}, a tibble with one row per item.
+An object of class \code{\link{dribble}}, a tibble with one row per file.
 }
 \description{
 Creates a new blank Drive file. Note there are better options for these
@@ -66,54 +71,57 @@ special cases:
 }
 }
 \examples{
-\dontrun{
-## Create a blank Google Doc named 'WordStar' in
-## your 'My Drive' root folder and star it
+\dontshow{if (drive_has_token()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+# Create a blank Google Doc named 'WordStar' in
+# your 'My Drive' root folder and star it
 wordstar <- drive_create("WordStar", type = "document", starred = TRUE)
 
-## is 'WordStar' really starred? YES
+# is 'WordStar' really starred? YES
 purrr::pluck(wordstar, "drive_resource", 1, "starred")
 
-## Create a blank Google Slides presentation in
-## the root folder, and set its description
+# Create a blank Google Slides presentation in
+# the root folder, and set its description
 execuvision <- drive_create(
   "ExecuVision",
   type = "presentation",
   description = "deeply nested bullet lists FTW"
 )
 
-## Did we really set the description? YES
+# Did we really set the description? YES
 purrr::pluck(execuvision, "drive_resource", 1, "description")
 
-## check out the new presentation
+# check out the new presentation
 drive_browse(execuvision)
 
-## Create folder 'b4xl' in the root folder,
-## then create an empty new Google Sheet in it
+# Create folder 'b4xl' in the root folder,
+# then create an empty new Google Sheet in it
 b4xl <- drive_mkdir("b4xl")
 drive_create("VisiCalc", path = b4xl, type = "spreadsheet")
 
-## Another way to create a Google Sheet in the folder 'b4xl'
+# Another way to create a Google Sheet in the folder 'b4xl'
 drive_create("b4xl/SuperCalc", type = "spreadsheet")
 
-## Another way to create a new file in a folder,
-## this time specifying parent `path` as a character
+# Yet another way to create a new file in a folder,
+# this time specifying parent `path` as a character
 drive_create("Lotus 1-2-3", path = "b4xl", type = "spreadsheet")
 
-## `overwrite = FALSE` errors if file already exists at target filepath
-## THIS WILL ERROR!
+# Did we really create those Sheets in the intended folder? YES
+drive_ls("b4xl")
+
+# `overwrite = FALSE` errors if file already exists at target filepath
+# THIS WILL ERROR!
 drive_create("VisiCalc", path = b4xl, overwrite = FALSE)
 
-## `overwrite = TRUE` moves an existing file to trash, then proceeds
+# `overwrite = TRUE` moves an existing file to trash, then proceeds
 drive_create("VisiCalc", path = b4xl, overwrite = TRUE)
 
-## clean up
+# clean up
 drive_rm(wordstar, b4xl, execuvision)
-}
+\dontshow{\}) # examplesIf}
 }
 \seealso{
 Wraps the \code{files.create} endpoint:
 \itemize{
-\item \url{https://developers.google.com/drive/v3/reference/files/create}
+\item \url{https://developers.google.com/drive/api/v3/reference/files/create}
 }
 }

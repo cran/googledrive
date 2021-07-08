@@ -1,7 +1,7 @@
 #' Build a request for the Google Drive API
 #'
 #' @description Build a request, using knowledge of the [Drive v3
-#'   API](https://developers.google.com/drive/v3/web/about-sdk) from its
+#'   API](https://developers.google.com/drive/api/v3/about-sdk) from its
 #'   [Discovery
 #'   Document](https://www.googleapis.com/discovery/v1/apis/drive/v3/rest). Most
 #'   users should, instead, use higher-level wrappers that facilitate common
@@ -15,7 +15,7 @@
 #'   endpoint. Separates parameters into those destined for the body, the query,
 #'   and URL endpoint substitution (which is also enacted).
 #'   * Adds an API key to the query if and only if `token = NULL`.
-#'   * Adds `supportsTeamDrives = TRUE` to the query if the endpoint requires.
+#'   * Adds `supportsAllDrives = TRUE` to the query if the endpoint requires.
 #'
 #' @param endpoint Character. Nickname for one of the selected Drive v3 API
 #'   endpoints built into googledrive. Learn more in [drive_endpoints()].
@@ -38,29 +38,30 @@
 #' @export
 #' @family low-level API functions
 #' @seealso [gargle::request_develop()], [gargle::request_build()]
-#' @examples
-#' \dontrun{
+#' @examplesIf drive_has_token()
 #' req <- request_generate(
 #'   "drive.files.get",
 #'   list(fileId = "abc"),
 #'   token = drive_token()
 #' )
 #' req
-#' }
 request_generate <- function(endpoint = character(),
                              params = list(),
                              key = NULL,
                              token = drive_token()) {
   ept <- drive_endpoint(endpoint)
   if (is.null(ept)) {
-    stop_glue("\nEndpoint not recognized:\n  * {endpoint}")
+    drive_abort(c(
+      "Endpoint not recognized:",
+      bulletize(gargle_map_cli(endpoint))
+    ))
   }
 
   ## modifications specific to googledrive package
   params$key <- key %||% params$key %||%
     drive_api_key() %||% gargle::tidyverse_api_key()
-  if (!is.null(ept$parameters$supportsTeamDrives)) {
-    params$supportsTeamDrives <- TRUE
+  if (!is.null(ept$parameters$supportsAllDrives)) {
+    params$supportsAllDrives <- TRUE
   }
 
   req <- gargle::request_develop(endpoint = ept, params = params)

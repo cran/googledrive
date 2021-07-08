@@ -9,7 +9,7 @@ drive_download(
   path = NULL,
   type = NULL,
   overwrite = FALSE,
-  verbose = TRUE
+  verbose = deprecated()
 )
 }
 \arguments{
@@ -22,18 +22,22 @@ is the file's name on Google Drive and the default location is working
 directory, possibly with an added file extension.}
 
 \item{type}{Character. Only consulted if \code{file} is a native Google file.
-Specifies the desired type of the downloaded file. Will be processed via
+Specifies the desired type of the exported file. Will be processed via
 \code{\link[=drive_mime_type]{drive_mime_type()}}, so either a file extension like \code{"pdf"} or a full MIME
 type like \code{"application/pdf"} is acceptable.}
 
 \item{overwrite}{A logical scalar. If local \code{path} already exists, do you
 want to overwrite it?}
 
-\item{verbose}{Logical, indicating whether to print informative messages
-(default \code{TRUE}).}
+\item{verbose}{\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#deprecated}{\figure{lifecycle-deprecated.svg}{options: alt='[Deprecated]'}}}{\strong{[Deprecated]}} This logical argument to
+individual googledrive functions is deprecated. To globally suppress
+googledrive messaging, use \code{options(googledrive_quiet = TRUE)} (the default
+behaviour is to emit informational messages). To suppress messaging in a
+more limited way, use the helpers \code{\link[=local_drive_quiet]{local_drive_quiet()}} or
+\code{\link[=with_drive_quiet]{with_drive_quiet()}}.}
 }
 \value{
-An object of class \code{\link{dribble}}, a tibble with one row per item.
+An object of class \code{\link{dribble}}, a tibble with one row per file.
 }
 \description{
 This function downloads a file from Google Drive. Native Google
@@ -42,35 +46,35 @@ exported to a conventional local file type. This can be specified:
 \itemize{
 \item explicitly via \code{type}
 \item implicitly via the file extension of \code{path}
-\item not at all, i.e. rely on default built into googledrive
+\item not at all, i.e. rely on the built-in default
 }
 
-To see what export file types are even possible, see the
-\href{https://developers.google.com/drive/v3/web/manage-downloads#downloading_google_documents}{Drive API documentation}.
-Returned dribble contains local path to downloaded file in \code{local_path}.
+To see what export file types are even possible, see the \href{https://developers.google.com/drive/api/v3/ref-export-formats}{Drive API documentation}
+or the result of \code{drive_about()$exportFormats}. The returned dribble
+includes a \code{local_path} column.
 }
 \examples{
-\dontrun{
-## Upload a csv file into a Google Sheet
-file <- drive_upload(
-  drive_example("chicken.csv"),
-  type = "spreadsheet"
-)
+\dontshow{if (drive_has_token()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+# Target one of the official example files
+(src_file <- drive_example_remote("chicken_sheet"))
 
-## Download Sheet as csv, explicit type
-(downloaded_file <- drive_download(file, type = "csv"))
+# Download Sheet as csv, explicit type
+downloaded_file <- drive_download(src_file, type = "csv")
 
-## See local path to new file
+# See local path to new file
 downloaded_file$local_path
 
-## Download as csv, type implicit in file extension
-drive_download(file, path = "my_csv_file.csv")
+# Download as csv, type implicit in file extension
+drive_download(src_file, path = "my_csv_file.csv")
 
-## Download with default name and type (xlsx)
-drive_download(file)
+# Download with default name and type (xlsx)
+drive_download(src_file)
 
-## Clean up
-unlink(c("chicken.csv", "chicken.csv.xlsx", "my_csv_file.csv"))
-drive_rm(file)
+# Clean up
+unlink(c("chicken_sheet.csv", "chicken_sheet.xlsx", "my_csv_file.csv"))
+\dontshow{\}) # examplesIf}
 }
+\seealso{
+\href{https://developers.google.com/drive/api/v3/manage-downloads}{Download files}, in the
+Drive API documentation.
 }

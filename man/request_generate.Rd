@@ -35,7 +35,7 @@ Note that, if auth has been de-activated via \code{\link[=drive_deauth]{drive_de
 \code{token}, and \code{url}, suitable as input for \code{\link[=request_make]{request_make()}}.
 }
 \description{
-Build a request, using knowledge of the \href{https://developers.google.com/drive/v3/web/about-sdk}{Drive v3 API} from its
+Build a request, using knowledge of the \href{https://developers.google.com/drive/api/v3/about-sdk}{Drive v3 API} from its
 \href{https://www.googleapis.com/discovery/v1/apis/drive/v3/rest}{Discovery Document}. Most
 users should, instead, use higher-level wrappers that facilitate common
 tasks, such as uploading or downloading Drive files. The functions here are
@@ -49,21 +49,21 @@ It takes a nickname for an endpoint and:
 endpoint. Separates parameters into those destined for the body, the query,
 and URL endpoint substitution (which is also enacted).
 \item Adds an API key to the query if and only if \code{token = NULL}.
-\item Adds \code{supportsTeamDrives = TRUE} to the query if the endpoint requires.
+\item Adds \code{supportsAllDrives = TRUE} to the query if the endpoint requires.
 }
 }
 \examples{
-\dontrun{
+\dontshow{if (drive_has_token()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
 req <- request_generate(
   "drive.files.get",
   list(fileId = "abc"),
   token = drive_token()
 )
 req
-}
+\dontshow{\}) # examplesIf}
 }
 \seealso{
-\code{\link[gargle:request_develop]{gargle::request_develop()}}, \code{\link[gargle:request_build]{gargle::request_build()}}
+\code{\link[gargle:request_develop]{gargle::request_develop()}}, \code{\link[gargle:request_develop]{gargle::request_build()}}
 
 Other low-level API functions: 
 \code{\link{drive_has_token}()},

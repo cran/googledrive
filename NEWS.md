@@ -1,3 +1,129 @@
+# googledrive 2.0.0
+
+## Team Drives are dead! Long live shared drives!
+
+Google Drive has rebranded Team Drives as **shared drives**.
+While anyone can have a **My Drive**, shared drives are only available for Google Workspace (previously known as G Suite).
+Shared drives and the files within are owned by a team/organization, as opposed to an individual.
+
+In googledrive, all `team_drive_*()` functions have been deprecated, in favor of
+their `shared_drive_*()` successors.
+Likewise, any `team_drive` argument has been deprecated, in favor of a new `shared_drive` argument.
+The terms used to describe which collections to search have also changed slightly, with `"allDrives"` replacing `"all"`.
+This applies to the `corpus` argument of `drive_find()` and `drive_get()`.
+
+Where to learn more:
+
+* [Team Drives is being renamed to shared drives](https://workspaceupdates.googleblog.com/2019/04/shared-drives.html) from Google Workspace blog
+* [Upcoming changes to the Google Drive API and Google Picker API](https://cloud.google.com/blog/products/application-development/upcoming-changes-to-the-google-drive-api-and-google-picker-api) from the Google Cloud blog
+
+## Single parenting and shortcuts
+
+As of 2020-09-30, Drive no longer allows a file to be placed in multiple folders; going forward, every file will have exactly 1 parent folder.
+In many cases that parent is just the top-level or root folder of your "My Drive" or of a shared drive.
+
+This change has been accompanied by the introduction of file **shortcuts**, which function much like symbolic or "soft" links.
+Shortcuts are the new way to make a file appear to be in more than one place or, said another way, the new way for one Drive file to be associated with more than one Drive filepath.
+A shortcut is a special type of Drive file, characterized by the `application/vnd.google-apps.shortcut` MIME type.
+You can make a shortcut to any Drive file, including to a Drive folder.
+
+Drive has been migrating existing files to the one-parent state, i.e., "single parenting" them.
+Drive selects the most suitable parent folder to keep, "based on the hierarchy's properties", and replaces any other parent-child relationships with a shortcut.
+
+New functions related to shortcuts:
+
+* `shortcut_create()`: creates a shortcut to a specific Drive file (or folder).
+* `shortcut_resolve()`: resolves a shortcut to its target, i.e. the file it
+  refers to. Works for multiple files at once, i.e. the input can be a mix of
+  shortcuts and non-shortcuts. The non-shortcuts are passed through and the
+  shortcuts are replaced by their targets.
+  
+How interacts with googledrive's support for specifying file by filepath:
+
+* Main principle: shortcuts are first-class Drive files that we assume users
+  will need to manipulate with googledrive. In general, there is no automatic
+  resolution to the target file.
+* `drive_reveal(what = "path")` returns the canonical path, i.e. there will be
+  no shortcuts among the non-terminal "folder" parts of the returned path.
+* `drive_get(path = "foo/")` can retrieve a folder named "foo" or a shortcut
+  named "foo", whose target is a folder.
+* When a shortcut-to-a-folder is specified as the `path`, in a context where it
+  unambiguously specifies a parent folder, the `path` **is** auto-resolved to
+  its target folder. This is the exception to the "no automatic resolution"
+  rule. Functions affected:
+  - `drive_ls(path, ...)`
+  - `drive_create(name, path, ...)` and its convenience wrappers `drive_mkdir()`
+    and `shortcut_create()`
+  - `drive_cp(file, path, ...)`
+  - `drive_mv(file, path, ...)`
+  - `drive_upload(media, path, ...)` and its close friend `drive_put()`
+
+Further reading about changes to the Drive folder model:
+
+* [Simplifying Google Drive’s folder structure and sharing models](https://cloud.google.com/blog/products/g-suite/simplifying-google-drives-folder-structure-and-sharing-models)
+* [Single-parenting behavior changes](https://developers.google.com/drive/api/v3/ref-single-parent)
+* [Create a shortcut to a Drive file](https://developers.google.com/drive/api/v3/shortcuts)
+* [Find files & folders with Google Drive shortcuts](https://support.google.com/drive/answer/9700156)
+
+## User interface
+
+The user interface has gotten more stylish, thanks to the cli package (<https://cli.r-lib.org>).
+All informational messages, warnings, and errors are now emitted via cli, which uses rlang's condition functions under-the-hood.
+
+`googledrive_quiet` is a new option to suppress informational messages from googledrive.
+Unless it's explicitly set to `FALSE`, the default is to message.
+
+The `verbose` argument of all `drive_*()` functions is deprecated and will be removed in a future release.
+In the current release, `verbose = FALSE` is still honored, but generates a warning.
+
+`local_drive_quiet()` and `with_drive_quiet()` are [withr-style](https://withr.r-lib.org) convenience helpers for setting `googledrive_quiet = TRUE` for some limited scope.
+
+## Other changes
+
+* We now share a variety of world-readable, persistent example files on Drive,
+  for use in examples and documentation. These remote example files complement
+  the local example files that were already included in googledrive.
+  
+  `drive_example()` is deprecated in favor of these accessors for example files:
+  - Plural forms:`drive_examples_remote()`, `drive_examples_local()`
+  - Singular forms: `drive_example_remote()`, `drive_example_local()`
+
+* `drive_read_string()` and `drive_read_raw()` are new functions that read the
+  content of a Drive file directly into R, skipping the step of downloading to a
+  local file (#81).
+
+* `drive_reveal(what = "property_name")` now works for any property found in
+  the file metadata stored in the `drive_resource` column. The new column is
+  also simplified in more cases now, e.g. to `character` or `logical`. If the
+  `property_name` suggests it's a date-time, we return `POSIXct`.
+
+* We've modernized the mechanisms by which the `dribble` class is (or is not)
+  retained by various data frame operations.
+  This boils down to updating or adding methods used by the base, dplyr,
+  pillar/tibble, and vctrs packages.
+  
+  We focus on compatibility with dplyr >= 1.0.0, which was released a year ago.
+  googledrive only Suggests dplyr, so all this really means is that `dribble`
+  manipulation via dplyr now works best with dplyr >= 1.0.0.
+
+* The `drive_id` S3 class is now implemented more fully, using the vctrs
+  package (#93, #364):
+
+  - The `drive_id` class will persist after mundane operations, like subsetting.
+  - You can no longer put strings that are obviously invalid into a `drive_id`
+    object.
+  - The `id` column of a `dribble` is now an instance of `drive_id`.
+
+## Dependency changes
+
+cli, lifecycle, and withr are new in Imports.
+
+pillar and vctrs are new in Imports, but were already indirect hard dependencies via tibble.
+
+mockr is new in Suggests.
+
+curl moves from Imports to Suggests, but remains an indirect hard dependency.
+
 # googledrive 1.0.1
 
 Patch release to modify a test for compatibility with an upcoming release of gargle.
@@ -131,7 +257,7 @@ Existence checks based on filepath (or name) can be expensive. This is why the d
 
 Sometimes you have a file you will repeatedly send to Drive, i.e. the first time you run an analysis, you create the file and, when you re-run it, you update the file. Previously this was hard to express with googledrive.
 
-`drive_put()` is useful here and refers to the HTTP verb `PUT`: create the thing if it doesn't exist or, if it does, replace its contents. A good explanation of `PUT` is [RESTful API Design — PUT vs PATCH](https://medium.com/backticks-tildes/restful-api-design-put-vs-patch-4a061aa3ed0b).
+`drive_put()` is useful here and refers to the HTTP verb `PUT`: create the thing if it doesn't exist or, if it does, replace its contents. A good explanation of `PUT` is [RESTful API Design -- PUT vs PATCH](https://medium.com/backticks-tildes/restful-api-design-put-vs-patch-4a061aa3ed0b).
 
 In pseudo-code, here's the basic idea of `drive_put()`:
 
@@ -165,7 +291,7 @@ Colaboratory notebooks now have some MIME type support, in terms of the `type` a
 
 ## Dependency changes
 
-R 3.1 is no longer explicitly supported or tested. Our general practice is to support the current release (3.6), devel, and the 4 previous versions of R (3.5, 3.4, 3.3, 3.2). See [Which versions of R do tidyverse packages support?](https://www.tidyverse.org/articles/2019/04/r-version-support/).
+R 3.1 is no longer explicitly supported or tested. Our general practice is to support the current release (3.6), devel, and the 4 previous versions of R (3.5, 3.4, 3.3, 3.2). See [Which versions of R do tidyverse packages support?](https://www.tidyverse.org/blog/2019/04/r-version-support/).
 
 gargle and magrittr are newly Imported.
 

@@ -10,11 +10,12 @@
 \alias{confirm_single_file}
 \alias{confirm_some_files}
 \alias{is_folder}
+\alias{is_shortcut}
+\alias{is_folder_shortcut}
 \alias{is_native}
 \alias{is_parental}
 \alias{is_mine}
-\alias{is_team_drive}
-\alias{is_team_drivy}
+\alias{is_shared_drive}
 \title{Check facts about a dribble}
 \usage{
 is_dribble(d)
@@ -33,15 +34,17 @@ confirm_some_files(d)
 
 is_folder(d)
 
+is_shortcut(d)
+
+is_folder_shortcut(d)
+
 is_native(d)
 
 is_parental(d)
 
 is_mine(d)
 
-is_team_drive(d)
-
-is_team_drivy(d)
+is_shared_drive(d)
 }
 \arguments{
 \item{d}{A \code{\link{dribble}}.}
@@ -57,16 +60,19 @@ represents, such as:
 }
 }
 \examples{
-\dontrun{
+\dontshow{if (drive_has_token()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
 ## most of us have multiple files or folders on Google Drive
 d <- drive_find()
 is_dribble(d)
 no_file(d)
 single_file(d)
 some_files(d)
-confirm_single_file(d)
+
+# this will error
+# confirm_single_file(d)
+
 confirm_some_files(d)
 is_folder(d)
 is_mine(d)
-}
+\dontshow{\}) # examplesIf}
 }

@@ -2,19 +2,7 @@ isFALSE <- function(x) identical(x, FALSE)
 
 is_toggle <- function(x) length(x) == 1L && is.logical(x)
 
-last <- function(x) x[length(x)]
-
-sq <- function(x) glue::single_quote(x)
-bt <- function(x) glue::backtick(x)
-
-trim_ws <- function(x) {
-  sub("\\s*$", "", sub("^\\s*", "", x))
-}
-
-# https://developers.google.com/drive/api/v3/search-shareddrives#query_multiple_terms_with_parentheses
-parenthesize <- function(x) glue("({x})")
-and <- function(x) glue_collapse(parenthesize(x), sep = " and ")
-or <- function(x) glue_collapse(x, sep = " or ")
+last <- function(x) pluck(x, length(x))
 
 escape_regex <- function(x) {
   chars <- c("*", ".", "?", "^", "+", "$", "|", "(", ")", "[", "]", "{", "}", "\\")
@@ -35,70 +23,6 @@ put_column <- function(.data, nm, val, .before = NULL, .after = NULL) {
   }
 }
 
-stop_glue <- function(..., .sep = "", .envir = parent.frame(),
-                      call. = FALSE, .domain = NULL) {
-  stop(
-    glue(..., .sep = .sep, .envir = .envir),
-    call. = call., domain = .domain
-  )
-}
-
-stop_glue_data <- function(..., .sep = "", .envir = parent.frame(),
-                           call. = FALSE, .domain = NULL) {
-  stop(
-    glue_data(..., .sep = .sep, .envir = .envir),
-    call. = call., domain = .domain
-  )
-}
-
-stop_collapse <- function(x) stop(glue_collapse(x, sep = "\n"), call. = FALSE)
-
-message_glue <- function(..., .sep = "", .envir = parent.frame(),
-                         .domain = NULL, .appendLF = TRUE) {
-  message(
-    glue(..., .sep = .sep, .envir = .envir),
-    domain = .domain, appendLF = .appendLF
-  )
-}
-
-message_glue_data <- function(..., .sep = "", .envir = parent.frame(),
-                              .domain = NULL) {
-  message(
-    glue_data(..., .sep = .sep, .envir = .envir),
-    domain = .domain
-  )
-}
-
-message_collapse <- function(x) message(glue_collapse(x, sep = "\n"))
-
-warning_glue <- function(..., .sep = "", .envir = parent.frame(),
-                         call. = FALSE, .domain = NULL) {
-  warning(
-    glue(..., .sep = .sep, .envir = .envir),
-    call. = call., domain = .domain
-  )
-}
-
-warning_glue_data <- function(..., .sep = "", .envir = parent.frame(),
-                              call. = FALSE, .domain = NULL) {
-  warning(
-    glue_data(..., .sep = .sep, .envir = .envir),
-    call. = call., domain = .domain
-  )
-}
-
-warning_collapse <- function(x) warning(glue_collapse(x, sep = "\n"))
-
-## removes last abs(n) elements
-crop <- function(x, n = 6L) if (n == 0) x else utils::head(x, -1 * abs(n))
-
-## Sys.getenv() but for exactly 1 env var and returns NULL if unset
-Sys_getenv <- function(x) {
-  stopifnot(length(x) == 1)
-  out <- Sys.getenv(x = x, unset = NA_character_)
-  if (is.na(out)) NULL else out
-}
-
 ## vectorized isTRUE()
 is_true <- function(x) vapply(x, isTRUE, logical(1))
 
@@ -106,7 +30,7 @@ is_true <- function(x) vapply(x, isTRUE, logical(1))
 #'
 #' `expose()` returns a sentinel object, similar in spirit to `NULL`, that tells
 #' the calling function to return its internal data structure. googledrive
-#' stores alot of information about the Drive API, MIME types, etc., internally
+#' stores a lot of information about the Drive API, MIME types, etc., internally
 #' and then exploits it in helper functions, like [`drive_mime_type()`],
 #' [`drive_fields()`], [`drive_endpoints()`], etc. We use these objects to
 #' provide nice defaults, check input validity, or lookup something cryptic,
@@ -122,14 +46,6 @@ is_true <- function(x) vapply(x, isTRUE, logical(1))
 expose <- function() structure(list(), class = "expose")
 
 is_expose <- function(x) inherits(x, "expose")
-
-glue_collapse <- function(x, sep = "", width = Inf, last = "") {
-  if (utils::packageVersion("glue") > "1.2.0") {
-    utils::getFromNamespace("glue_collapse", "glue")(x = x, sep = sep, width = width, last = last)
-  } else {
-    utils::getFromNamespace("collapse", "glue")(x = x, sep = sep, width = width, last = last)
-  }
-}
 
 ## partition a parameter list into two parts, using names to identify
 ## components destined for the second part

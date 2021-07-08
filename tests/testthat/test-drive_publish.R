@@ -1,7 +1,5 @@
-context("Publish files")
-
 # ---- nm_fun ----
-nm_ <- nm_fun("TEST-drive-publish", NULL)
+nm_ <- nm_fun("TEST-drive_publish", user_run = FALSE)
 
 # ---- clean ----
 if (CLEAN) {
@@ -82,11 +80,7 @@ test_that("drive_publish() fails for non-native file type", {
   skip_if_offline()
 
   drive_pdf <- drive_get(nm_("foo_pdf"))
-
-  expect_error(
-    drive_publish(drive_pdf),
-    "Only native Google files can be published"
-  )
+  expect_snapshot(drive_publish(drive_pdf), error = TRUE)
 })
 
 test_that("drive_publish() is vectorized", {

@@ -1,13 +1,12 @@
-context("Copy files")
-
 # ---- nm_fun ----
-me_ <- nm_fun("TEST-drive-cp")
-nm_ <- nm_fun("TEST-drive-cp", NULL)
+me_ <- nm_fun("TEST-drive_cp")
+nm_ <- nm_fun("TEST-drive_cp", user_run = FALSE)
 
 # ---- clean ----
 if (CLEAN) {
   drive_trash(c(
     nm_("i-am-a-folder"),
+    nm_("copy-to-folder-shortcut"),
     nm_("not-unique-folder"),
     nm_("i-am-a-file")
   ))
@@ -16,8 +15,9 @@ if (CLEAN) {
 # ---- setup ----
 if (SETUP) {
   drive_mkdir(nm_("i-am-a-folder"))
-  drive_mkdir(nm_("not-unique-folder"))
-  drive_mkdir(nm_("not-unique-folder"))
+  shortcut_create(nm_("i-am-a-folder"), name = nm_("copy-to-folder-shortcut"))
+  drive_mkdir(name = nm_("not-unique-folder"), path = googledrive:::root_id())
+  drive_mkdir(name = nm_("not-unique-folder"), path = googledrive:::root_id())
   drive_upload(
     system.file("DESCRIPTION"),
     nm_("i-am-a-file")
@@ -28,37 +28,59 @@ if (SETUP) {
 test_that("drive_cp() can copy file in place", {
   skip_if_no_token()
   skip_if_offline()
-  on.exit(drive_rm(me_("i-am-a-file")))
+
+  cp_name <- me_("i-am-a-file")
+  defer_drive_rm(cp_name)
 
   file <- drive_get(nm_("i-am-a-file"))
-  expect_message(
-    file_cp <- drive_cp(file, name = me_("i-am-a-file")),
-    "File copied"
+
+  local_drive_loud_and_wide()
+  drive_cp_message <- capture.output(
+    cp_file <- drive_cp(file, name = cp_name),
+    type = "message"
   )
-  expect_identical(file_cp$name, me_("i-am-a-file"))
+  drive_cp_message <- drive_cp_message %>%
+    scrub_filepath(cp_name) %>%
+    scrub_file_id()
+  expect_snapshot(
+    write_utf8(drive_cp_message)
+  )
+
+  expect_identical(cp_file$name, cp_name)
 
   ## should have the same parent
   expect_identical(
     file$drive_resource[[1]]$parents,
-    file_cp$drive_resource[[1]]$parents
+    cp_file$drive_resource[[1]]$parents
   )
 })
 
 test_that("drive_cp() can copy a file into a different folder", {
   skip_if_no_token()
   skip_if_offline()
-  on.exit(drive_rm(me_("i-am-a-file")))
+
+  cp_name <- me_("i-am-a-file")
+  defer_drive_rm(cp_name)
 
   file <- drive_get(nm_("i-am-a-file"))
   folder <- drive_get(nm_("i-am-a-folder"))
-  expect_message(
-    file_cp <- drive_cp(file, path = folder, name = me_("i-am-a-file")),
-    "File copied"
-  )
-  expect_identical(file_cp$name, me_("i-am-a-file"))
 
-  ## should have folder as parent
-  expect_identical(file_cp$drive_resource[[1]]$parents[[1]], folder$id)
+  local_drive_loud_and_wide()
+  drive_cp_message <- capture.output(
+    cp_file <- drive_cp(file, path = folder, name = cp_name),
+    type = "message"
+  )
+  drive_cp_message <- drive_cp_message %>%
+    scrub_filepath(cp_name) %>%
+    scrub_file_id()
+  expect_snapshot(
+    write_utf8(drive_cp_message)
+  )
+  expect_identical(cp_file$name, cp_name)
+
+  # should have folder as parent
+  file <- drive_reveal(cp_file, "parent")
+  expect_identical(file$id_parent, folder$id)
 })
 
 test_that("drive_cp() doesn't tolerate ambiguity in `path`", {
@@ -66,11 +88,11 @@ test_that("drive_cp() doesn't tolerate ambiguity in `path`", {
   skip_if_offline()
 
   file <- drive_get(nm_("i-am-a-file"))
-  ## `path` lacks trailing slash, so ambiguous if it's parent folder or
-  ## folder + name
-  expect_error(
-    file_cp <- drive_cp(file, nm_("i-am-a-folder")),
-    "Unclear if `path` specifies parent folder or full path"
+  # `path` lacks trailing slash, so ambiguous if it's parent folder or
+  # folder + name
+  expect_snapshot(
+    drive_cp(file, nm_("i-am-a-folder")),
+    error = TRUE
   )
 })
 
@@ -78,42 +100,73 @@ test_that("drive_cp() errors if asked to copy a folder", {
   skip_if_no_token()
   skip_if_offline()
 
-  expect_error(
+  expect_snapshot(
     drive_cp(nm_("i-am-a-folder")),
-    "The Drive API does not copy folders"
+    error = TRUE
   )
 })
 
 test_that("drive_cp() takes name, assumes path is folder if both are specified", {
   skip_if_no_token()
   skip_if_offline()
-  on.exit(drive_rm(me_("file-name")))
 
-  ## if given `path` and `name`, assumes `path` is a folder
-  expect_message(
+  cp_name <- me_("file-name")
+  defer_drive_rm(cp_name)
+  local_drive_loud_and_wide()
+
+  # if given `path` and `name`, assumes `path` is a folder
+  # the message capture trick is necessary because cp_name includes {user}
+  drive_cp_message <- capture.output(
     file_cp <- drive_cp(
       nm_("i-am-a-file"),
       path = nm_("i-am-a-folder"),
-      name = me_("file-name")
+      name = cp_name
     ),
-    "File copied"
+    type = "message"
   )
+  drive_cp_message <- drive_cp_message %>%
+    scrub_filepath(cp_name) %>%
+    scrub_file_id()
+  expect_snapshot(
+    write_utf8(drive_cp_message)
+  )
+
   expect_identical(file_cp$name, me_("file-name"))
 
-  ## if `path` is not a folder, will error
-  expect_error(
+  # error if `path` is not a folder
+  expect_snapshot(
     file_cp <- drive_cp(
       nm_("i-am-a-file"),
-      nm_("file-name"),
-      nm_("file-name")
-    )
+      path = nm_("file-name"),
+      name = nm_("file-name")
+    ),
+    error = TRUE
   )
 
-  expect_error(
+  # error if `path` doesn't uniquely identify one folder/shared drive
+  expect_snapshot(
     file_cp <- drive_cp(
       nm_("i-am-a-file"),
-      paste0(nm_("not-unique-folder"), "/")
+      append_slash(nm_("not-unique-folder"))
     ),
-    "doesn't uniquely identify exactly one"
+    error = TRUE
   )
+})
+
+test_that("drive_cp() can copy to a folder-shortcut", {
+  skip_if_no_token()
+  skip_if_offline()
+
+  target_parent <- drive_get(nm_("i-am-a-folder"))
+  file_to_copy <- drive_get(nm_("i-am-a-file"))
+
+  cp_name <- me_("i-am-a-file")
+  defer_drive_rm(cp_name)
+
+  out <- drive_cp(
+    file_to_copy,
+    path = nm_("copy-to-folder-shortcut"),
+    name = cp_name
+  )
+  expect_equal(drive_reveal(out, "parent")$id_parent, target_parent$id)
 })

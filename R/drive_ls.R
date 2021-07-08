@@ -1,33 +1,34 @@
-#' List contents of a folder or Team Drive
+#' List contents of a folder or shared drive
 #'
-#' List the contents of a folder or Team Drive, recursively or not. This is a
+#' List the contents of a folder or shared drive, recursively or not. This is a
 #' thin wrapper around [drive_find()], that simply adds one constraint: the
 #' search is limited to direct or indirect children of `path`.
 #'
 #' @param path Specifies a single folder on Google Drive whose contents you want
 #'   to list. Can be an actual path (character), a file id or URL marked with
-#'   [as_id()], or a [`dribble`]. If it is a Team Drive or is a folder on a Team
-#'   Drive, it must be passed as a [`dribble`].
+#'   [as_id()], or a [`dribble`]. If it is a shared drive or is a folder on a
+#'   shared drive, it must be passed as a [`dribble`]. If `path` is a shortcut
+#'   to a folder, it is automatically resolved to its target folder.
 #' @param ... Any parameters that are valid for [drive_find()].
 #' @param recursive Logical, indicating if you want only direct children of
 #'   `path` (`recursive = FALSE`, the default) or all children, including
 #'   indirect (`recursive = TRUE`).
 #'
-#' @template dribble-return
+#' @eval return_dribble()
 #' @export
 #' @examples
 #' \dontrun{
-#' ## get contents of the folder 'abc' (non-recursive)
+#' # get contents of the folder 'abc' (non-recursive)
 #' drive_ls("abc")
 #'
-#' ## get contents of folder 'abc' whose names contain the letters 'def'
+#' # get contents of folder 'abc' whose names contain the letters 'def'
 #' drive_ls(path = "abc", pattern = "def")
 #'
-#' ## get all Google spreadsheets in folder 'abc'
-#' ## whose names contain the letters 'def'
+#' # get all Google spreadsheets in folder 'abc'
+#' # whose names contain the letters 'def'
 #' drive_ls(path = "abc", pattern = "def", type = "spreadsheet")
 #'
-#' ## get all the files below 'abc', recursively, that are starred
+#' # get all the files below 'abc', recursively, that are starred
 #' drive_ls(path = "abc", q = "starred = true", recursive = TRUE)
 #' }
 drive_ls <- function(path = NULL, ..., recursive = FALSE) {
@@ -36,20 +37,15 @@ drive_ls <- function(path = NULL, ..., recursive = FALSE) {
     return(drive_find(...))
   }
 
-  if (is_path(path)) {
-    path <- append_slash(path)
-  }
-  path <- as_dribble(path)
-  path <- confirm_single_file(path)
+  path <- as_parent(path)
 
-  params <- rlang::list2(...)
-  if (is_team_drivy(path)) {
-    if (is_team_drive(path)) {
-      params[["team_drive"]] <- as_id(path)
-    } else {
-      params[["team_drive"]] <- as_id(
-        path[["drive_resource"]][[1]][["teamDriveId"]]
-      )
+  params <- list2(...)
+  if (is_shared_drive(path)) {
+    params[["shared_drive"]] <- as_id(path)
+  } else {
+    shared_drive <- pluck(path, "drive_resource", 1, "driveId")
+    if (!is.null(shared_drive)) {
+      params[["shared_drive"]] <- params[["shared_drive"]] %||% as_id(shared_drive)
     }
   }
 
@@ -61,7 +57,7 @@ drive_ls <- function(path = NULL, ..., recursive = FALSE) {
   parent <- glue("({or(parent)})")
   params[["q"]] <- append(params[["q"]], parent)
 
-  rlang::exec(drive_find, !!!params)
+  exec(drive_find, !!!params)
 }
 
 folders_below <- function(id) {

@@ -5,63 +5,64 @@
 #' depending on whether the Drive file already exists, see [drive_put()].
 #'
 #' @seealso Wraps the `files.update` endpoint:
-#'   * <https://developers.google.com/drive/v3/reference/files/update>
+#'   * <https://developers.google.com/drive/api/v3/reference/files/update>
 #'
 #' This function supports media upload:
-#'   * <https://developers.google.com/drive/v3/web/manage-uploads>
+#'   * <https://developers.google.com/drive/api/v3/manage-uploads>
 #'
 #' @template file-singular
 #' @template media
 #' @template dots-metadata
 #' @template verbose
 #'
-#' @template dribble-return
+#' @eval return_dribble()
 #' @export
 #'
-#' @examples
-#' \dontrun{
-#' ## Create a new file, so we can update it
-#' x <- drive_upload(drive_example("chicken.csv"))
+#' @examplesIf drive_has_token()
+#' # Create a new file, so we can update it
+#' x <- drive_example_remote("chicken.csv") %>%
+#'   drive_cp()
 #'
-#' ## Update the file with new media
+#' # Update the file with new media
 #' x <- x %>%
-#'   drive_update(drive_example("chicken.txt"))
+#'   drive_update(drive_example_local("chicken.txt"))
 #'
-#' ## Update the file with new metadata.
-#' ## Notice here `name` is not an argument of `drive_update()`, we are passing
-#' ## this to the API via the `...``
+#' # Update the file with new metadata.
+#' # Notice here `name` is not an argument of `drive_update()`, we are passing
+#' # this to the API via the `...``
 #' x <- x %>%
 #'   drive_update(name = "CHICKENS!")
 #'
-#' ## We can add a parent folder by passing `addParents` via `...`.
-#' folder <- drive_mkdir("second-parent-folder")
+#' # Update the file with new media AND new metadata
 #' x <- x %>%
-#'   drive_update(addParents = as_id(folder))
-#' ## Verify the file now has multiple parents
-#' purrr::pluck(x, "drive_resource", 1, "parents")
+#'   drive_update(
+#'     drive_example_local("chicken.txt"),
+#'     name = "chicken-poem-again.txt"
+#'   )
 #'
-#' ## Update the file with new media AND new metadata
-#' x <- x %>%
-#'   drive_update(drive_example("chicken.txt"), name = "chicken-poem-again.txt")
-#'
-#' ## Clean up
-#' drive_rm(x, folder)
-#' }
+#' # Clean up
+#' drive_rm(x)
 drive_update <- function(file,
                          media = NULL,
                          ...,
-                         verbose = TRUE) {
-  if (!is.null(media) && !file.exists(media)) {
-    stop_glue("\nLocal file does not exist:\n  * {media}")
+                         verbose = deprecated()) {
+  warn_for_verbose(verbose)
+  if ((!is.null(media)) && (!file.exists(media))) {
+    drive_abort(c(
+      "No file exists at the local {.arg media} path:",
+      bulletize(gargle_map_cli(media, "{.path <<x>>}"), bullet = "x")
+    ))
   }
 
   file <- as_dribble(file)
   file <- confirm_single_file(file)
 
-  meta <- toCamel(rlang::list2(...))
+  meta <- toCamel(list2(...))
 
   if (is.null(media) && length(meta) == 0) {
-    if (verbose) message("No updates specified.")
+    drive_bullets(c(
+      "!" = "No updates specified."
+    ))
     return(invisible(file))
   }
 
@@ -73,13 +74,12 @@ drive_update <- function(file,
     if (length(meta) == 0) {
       out <- drive_update_media(file, media)
     } else {
+      media <- enc2utf8(media)
       out <- drive_update_multipart(file, media, meta)
     }
   }
 
-  if (verbose) {
-    message_glue("\nFile updated:\n  * {out$name}: {out$id}")
-  }
+  drive_bullets(c("File updated:", bulletize(gargle_map_cli(out))))
 
   invisible(out)
 }
@@ -97,36 +97,35 @@ drive_update_media <- function(file, media) {
 
   ## media uploads have unique body situations, so customizing here.
   request$body <- httr::upload_file(path = media)
-  response <- request_make(request, encode = "json")
+  response <- request_make(request)
   as_dribble(list(gargle::response_process(response)))
 }
 
 drive_update_metadata <- function(file, meta) {
+  params <- meta %||% list()
+  params$fileId <- file$id
   request <- request_generate(
     endpoint = "drive.files.update",
-    params = c(
-      fileId = file$id,
-      meta
-    )
+    params = params
   )
-  response <- request_make(request, encode = "json")
+  response <- request_make(request)
   as_dribble(list(gargle::response_process(response)))
 }
 
 drive_update_multipart <- function(file, media, meta) {
+  # We include the metadata here even though it's overwritten below,
+  # so that request_generate() still validates it.
+  params <- meta %||% list()
+  params$fileId <- file$id
+  params$uploadType <- "multipart"
   request <- request_generate(
     endpoint = "drive.files.update.media",
-    params = c(
-      fileId = file$id,
-      uploadType = "multipart",
-      ## We provide the metadata here even though it's overwritten below,
-      ## so that request_generate() still validates it.
-      meta
-    )
+    params = params
   )
-  meta_file <- tempfile()
-  on.exit(unlink(meta_file))
-  writeLines(jsonlite::toJSON(meta), meta_file)
+  meta_file <- withr::local_file(
+    tempfile("drive-update-meta", fileext = ".json")
+  )
+  write_utf8(jsonlite::toJSON(meta), meta_file)
   ## media uploads have unique body situations, so customizing here.
   request$body <- list(
     metadata = httr::upload_file(

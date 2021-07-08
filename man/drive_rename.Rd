@@ -4,7 +4,7 @@
 \alias{drive_rename}
 \title{Rename a Drive file}
 \usage{
-drive_rename(file, name = NULL, overwrite = NA, verbose = TRUE)
+drive_rename(file, name = NULL, overwrite = NA, verbose = deprecated())
 }
 \arguments{
 \item{file}{Something that identifies the file of interest on your Google
@@ -31,33 +31,37 @@ thrown if two or more pre-existing files are found.
 Note that existence checks, based on filepath, are expensive operations, i.e.
 they require additional API calls.}
 
-\item{verbose}{Logical, indicating whether to print informative messages
-(default \code{TRUE}).}
+\item{verbose}{\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#deprecated}{\figure{lifecycle-deprecated.svg}{options: alt='[Deprecated]'}}}{\strong{[Deprecated]}} This logical argument to
+individual googledrive functions is deprecated. To globally suppress
+googledrive messaging, use \code{options(googledrive_quiet = TRUE)} (the default
+behaviour is to emit informational messages). To suppress messaging in a
+more limited way, use the helpers \code{\link[=local_drive_quiet]{local_drive_quiet()}} or
+\code{\link[=with_drive_quiet]{with_drive_quiet()}}.}
 }
 \value{
-An object of class \code{\link{dribble}}, a tibble with one row per item.
+An object of class \code{\link{dribble}}, a tibble with one row per file.
 }
 \description{
 This is a wrapper for \code{\link[=drive_mv]{drive_mv()}} that only renames a file.
 If you would like to rename AND move the file, see \code{\link[=drive_mv]{drive_mv()}}.
 }
 \examples{
-\dontrun{
-## Create a file to rename
+\dontshow{if (drive_has_token()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+# Create a file to rename
 file <- drive_create("file-to-rename")
 
-## Rename it
+# Rename it
 file <- drive_rename(file, name = "renamed-file")
 
-## `overwrite = FALSE` errors if something already exists at target filepath
-## THIS WILL ERROR!
+# `overwrite = FALSE` errors if something already exists at target filepath
+# THIS WILL ERROR!
 drive_create("name-squatter")
 drive_rename(file, name = "name-squatter", overwrite = FALSE)
 
-## `overwrite = TRUE` moves the existing item to trash, then proceeds
+# `overwrite = TRUE` moves the existing item to trash, then proceeds
 file <- drive_rename(file, name = "name-squatter", overwrite = TRUE)
 
-## Clean up
+# Clean up
 drive_rm(file)
-}
+\dontshow{\}) # examplesIf}
 }

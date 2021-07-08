@@ -1,8 +1,6 @@
-context("Share files")
-
 # ---- nm_fun ----
-me_ <- nm_fun("TEST-drive-share")
-nm_ <- nm_fun("TEST-drive-share", NULL)
+me_ <- nm_fun("TEST-drive_share")
+nm_ <- nm_fun("TEST-drive_share", user_run = FALSE)
 
 # ---- clean ----
 if (CLEAN) {
@@ -20,14 +18,14 @@ if (SETUP) {
 # ---- tests ----
 
 test_that("drive_share() errors for invalid `role` or `type`", {
-  expect_error(drive_share(dribble(), role = "chef"), "should be one of")
-  expect_error(drive_share(dribble(), type = "pet"), "should be one of")
+  expect_snapshot(drive_share(dribble(), role = "chef"), error = TRUE)
+  expect_snapshot(drive_share(dribble(), type = "pet"), error = TRUE)
 })
 
 test_that("drive_share() adds permissions", {
   skip_if_no_token()
   skip_if_offline()
-  on.exit(drive_rm(me_("mirrors-to-share")))
+  defer_drive_rm(me_("mirrors-to-share"))
 
   file <- drive_upload(
     file.path(R.home("doc"), "BioC_mirrors.csv"),
@@ -38,6 +36,6 @@ test_that("drive_share() adds permissions", {
   file <- drive_share(file, role = "commenter", type = "anyone")
   expect_true(file$shared)
   perms <- file[["permissions_resource"]][[1]][["permissions"]]
-  expect_setequal(purrr::map_chr(perms, "role"), c("owner", "commenter"))
-  expect_setequal(purrr::map_chr(perms, "type"), c("user", "anyone"))
+  expect_setequal(map_chr(perms, "role"), c("owner", "commenter"))
+  expect_setequal(map_chr(perms, "type"), c("user", "anyone"))
 })

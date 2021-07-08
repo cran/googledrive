@@ -8,7 +8,7 @@ drive_about()
 }
 \value{
 A list representation of a Drive
-\href{https://developers.google.com/drive/v3/reference/about#resource}{about resource}
+\href{https://developers.google.com/drive/api/v3/reference/about}{about resource}
 }
 \description{
 Gets information about the user, the user's Drive, and system capabilities.
@@ -16,18 +16,18 @@ This function mostly exists to power \code{\link[=drive_user]{drive_user()}}, wh
 useful information (the information on current user) and prints it nicely.
 }
 \examples{
-\dontrun{
+\dontshow{if (drive_has_token()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
 drive_about()
 
-## explore the names of available Team Drive themes
+# explore the export formats available for Drive files, by MIME type
 about <- drive_about()
-about[["teamDriveThemes"]] \%>\%
-  purrr::map_chr("id")
-}
+about[["exportFormats"]] \%>\%
+  purrr::map(unlist)
+\dontshow{\}) # examplesIf}
 }
 \seealso{
 Wraps the \code{about.get} endpoint:
 \itemize{
-\item \url{https://developers.google.com/drive/v3/reference/about/get}
+\item \url{https://developers.google.com/drive/api/v3/reference/about/get}
 }
 }

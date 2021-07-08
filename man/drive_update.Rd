@@ -4,7 +4,7 @@
 \alias{drive_update}
 \title{Update an existing Drive file}
 \usage{
-drive_update(file, media = NULL, ..., verbose = TRUE)
+drive_update(file, media = NULL, ..., verbose = deprecated())
 }
 \arguments{
 \item{file}{Something that identifies the file of interest on your Google
@@ -13,17 +13,20 @@ Drive. Can be a name or path, a file id or URL marked with \code{\link[=as_id]{a
 
 \item{media}{Character, path to the local file to upload.}
 
-\item{...}{Named parameters to pass along to the Drive API. Has the tidy dots
-semantics that come from using \code{\link[rlang:list2]{rlang::list2()}}. You can affect the
-metadata of the target file by specifying properties of the Files resource
-via \code{...}. Read the "Request body" section of the Drive API docs for the
-associated endpoint to learn about relevant parameters.}
+\item{...}{Named parameters to pass along to the Drive API. Has \link[rlang:dyn-dots]{dynamic dots} semantics. You can affect the metadata of the target file by
+specifying properties of the Files resource via \code{...}. Read the "Request
+body" section of the Drive API docs for the associated endpoint to learn
+about relevant parameters.}
 
-\item{verbose}{Logical, indicating whether to print informative messages
-(default \code{TRUE}).}
+\item{verbose}{\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#deprecated}{\figure{lifecycle-deprecated.svg}{options: alt='[Deprecated]'}}}{\strong{[Deprecated]}} This logical argument to
+individual googledrive functions is deprecated. To globally suppress
+googledrive messaging, use \code{options(googledrive_quiet = TRUE)} (the default
+behaviour is to emit informational messages). To suppress messaging in a
+more limited way, use the helpers \code{\link[=local_drive_quiet]{local_drive_quiet()}} or
+\code{\link[=with_drive_quiet]{with_drive_quiet()}}.}
 }
 \value{
-An object of class \code{\link{dribble}}, a tibble with one row per item.
+An object of class \code{\link{dribble}}, a tibble with one row per file.
 }
 \description{
 Update an existing Drive file id with new content ("media" in Drive
@@ -31,43 +34,40 @@ API-speak), new metadata, or both.  To create a new file or update existing,
 depending on whether the Drive file already exists, see \code{\link[=drive_put]{drive_put()}}.
 }
 \examples{
-\dontrun{
-## Create a new file, so we can update it
-x <- drive_upload(drive_example("chicken.csv"))
+\dontshow{if (drive_has_token()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+# Create a new file, so we can update it
+x <- drive_example_remote("chicken.csv") \%>\%
+  drive_cp()
 
-## Update the file with new media
+# Update the file with new media
 x <- x \%>\%
-  drive_update(drive_example("chicken.txt"))
+  drive_update(drive_example_local("chicken.txt"))
 
-## Update the file with new metadata.
-## Notice here `name` is not an argument of `drive_update()`, we are passing
-## this to the API via the `...``
+# Update the file with new metadata.
+# Notice here `name` is not an argument of `drive_update()`, we are passing
+# this to the API via the `...``
 x <- x \%>\%
   drive_update(name = "CHICKENS!")
 
-## We can add a parent folder by passing `addParents` via `...`.
-folder <- drive_mkdir("second-parent-folder")
+# Update the file with new media AND new metadata
 x <- x \%>\%
-  drive_update(addParents = as_id(folder))
-## Verify the file now has multiple parents
-purrr::pluck(x, "drive_resource", 1, "parents")
+  drive_update(
+    drive_example_local("chicken.txt"),
+    name = "chicken-poem-again.txt"
+  )
 
-## Update the file with new media AND new metadata
-x <- x \%>\%
-  drive_update(drive_example("chicken.txt"), name = "chicken-poem-again.txt")
-
-## Clean up
-drive_rm(x, folder)
-}
+# Clean up
+drive_rm(x)
+\dontshow{\}) # examplesIf}
 }
 \seealso{
 Wraps the \code{files.update} endpoint:
 \itemize{
-\item \url{https://developers.google.com/drive/v3/reference/files/update}
+\item \url{https://developers.google.com/drive/api/v3/reference/files/update}
 }
 
 This function supports media upload:
 \itemize{
-\item \url{https://developers.google.com/drive/v3/web/manage-uploads}
+\item \url{https://developers.google.com/drive/api/v3/manage-uploads}
 }
 }

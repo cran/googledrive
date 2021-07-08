@@ -5,9 +5,9 @@
 \alias{drive_unpublish}
 \title{Publish native Google files}
 \usage{
-drive_publish(file, ..., verbose = TRUE)
+drive_publish(file, ..., verbose = deprecated())
 
-drive_unpublish(file, ..., verbose = TRUE)
+drive_unpublish(file, ..., verbose = deprecated())
 }
 \arguments{
 \item{file}{Something that identifies the file(s) of interest on your Google
@@ -19,11 +19,17 @@ linked below for details). For \code{drive_publish()}, we include
 \code{publishAuto = TRUE} and \code{publishedOutsideDomain = TRUE}, if user does not
 specify other values.}
 
-\item{verbose}{Logical, indicating whether to print informative messages
-(default \code{TRUE}).}
+\item{verbose}{\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#deprecated}{\figure{lifecycle-deprecated.svg}{options: alt='[Deprecated]'}}}{\strong{[Deprecated]}} This logical argument to
+individual googledrive functions is deprecated. To globally suppress
+googledrive messaging, use \code{options(googledrive_quiet = TRUE)} (the default
+behaviour is to emit informational messages). To suppress messaging in a
+more limited way, use the helpers \code{\link[=local_drive_quiet]{local_drive_quiet()}} or
+\code{\link[=with_drive_quiet]{with_drive_quiet()}}.}
 }
 \value{
-An object of class \code{\link{dribble}}, a tibble with one row per item.
+An object of class \code{\link{dribble}}, a tibble with one row per file.
+There will be extra columns, \code{published} and
+\code{revisions_resource}.
 }
 \description{
 Publish (or un-publish) native Google files to the web. Native Google files
@@ -32,28 +38,26 @@ include Google Docs, Google Sheets, and Google Slides. The returned
 Read more in \code{\link[=drive_reveal]{drive_reveal()}}.
 }
 \examples{
-\dontrun{
-## Upload file to publish
-file <- drive_upload(
-  drive_example("chicken.csv"),
-  type = "spreadsheet"
-  )
+\dontshow{if (drive_has_token()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+# Create a file to publish
+file <- drive_example_remote("chicken_sheet") \%>\%
+  drive_cp()
 
-## Publish file
+# Publish file
 file <- drive_publish(file)
 file$published
 
-## Unpublish file
+# Unpublish file
 file <- drive_unpublish(file)
 file$published
 
-## Clean up
+# Clean up
 drive_rm(file)
-}
+\dontshow{\}) # examplesIf}
 }
 \seealso{
 Wraps the \code{revisions.update} endpoint:
 \itemize{
-\item \url{https://developers.google.com/drive/v3/reference/revisions/update}
+\item \url{https://developers.google.com/drive/api/v3/reference/revisions/update}
 }
 }

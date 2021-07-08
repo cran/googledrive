@@ -1,21 +1,49 @@
 #' Get Drive files by path or id
 #'
-#' @description Retrieve metadata for files specified via path or via file id.
+#' Retrieves metadata for files specified via `path` or via file `id`. This
+#' function is quite straightforward if you specify files by `id`. But there are
+#' some important considerations when you specify your target files by `path`.
+#' See below for more. If the target files are specified via `path`, the
+#' returned [`dribble`] will include a `path` column.
+
+#' @section Getting by `path`:
 #'
-#' @template not-like-your-local-file-system
+#'   Google Drive does NOT behave like your local file system! File and folder
+#'   names need not be unique, even at a given level of the hierarchy. This
+#'   means that a single path can describe multiple files (or 0 or exactly 1).
 #'
-#' @description If the files are specified via `path`, the returned [`dribble`]
-#'   will include a `path` variable. To add path information to any [`dribble`]
-#'   that lacks it, use [drive_reveal()], e.g., `drive_reveal(d, "path")`. If
-#'   you want to list the contents of a folder, use [drive_ls()]. For general
-#'   searching, use [drive_find()].
+#'   A single file can also be compatible with multiple paths, i.e. one path
+#'   could be more specific than the other. A file located at `~/alfa/bravo` can
+#'   be found as `bravo`, `alfa/bravo`, and `~/alfa/bravo`. If all 3 of those
+#'   were included in the input `path`, they would be represented by a
+#'   **single** row in the output.
 #'
-#' @template team-drives-description
+#'   It's best to think of `drive_get()` as a setwise operation when using file
+#'   paths. Do not assume that the `i`-th input path corresponds to row `i` in
+#'   the output (although it often does!). If there's not a 1-to-1 relationship
+#'   between the input and output, this will be announced in a message.
 #'
-#' @seealso Wraps the `files.get` endpoint and, if you specify files by name or
+#'   `drive_get()` performs just enough path resolution to uniquely identify a
+#'   file compatible with each input `path`, for all `path`s at once. If you
+#'   absolutely want the full canonical path, run the output of `drive_get()`
+#'   through [`drive_reveal(d, "path")`][drive_reveal()]`.
+#'
+
+#' @section Files that you don't own:
+#'
+#'   If you want to get a file via `path` and it's not necessarily on your My
+#'   Drive, you may need to specify the `shared_drive` or `corpus` arguments to
+#'   search other collections of items. Read more about [shared
+#'   drives][shared_drives].
+#'
+#' @seealso To add path information to any [`dribble`] that lacks it, use
+#'   [`drive_reveal(d, "path")`][drive_reveal()]. To list the contents of a
+#'   folder, use [drive_ls()]. For general searching, use [drive_find()].
+#'
+#' Wraps the `files.get` endpoint and, if you specify files by name or
 #'   path, also calls `files.list`:
-#'   * <https://developers.google.com/drive/v3/reference/files/get>
-#'   * <https://developers.google.com/drive/v3/reference/files/list>
+#'   * <https://developers.google.com/drive/api/v3/reference/files/get>
+#'   * <https://developers.google.com/drive/api/v3/reference/files/list>
 #'
 #' @param path Character vector of path(s) to get. Use a trailing slash to
 #'   indicate explicitly that a path is a folder, which can disambiguate if
@@ -25,84 +53,112 @@
 #' @param id Character vector of Drive file ids or URLs (it is first processed
 #'   with [as_id()]). If both `path` and `id` are non-`NULL`, `id` is silently
 #'   ignored.
-#' @template team_drive-singular
+#' @template shared_drive-singular
 #' @template corpus
 #' @template verbose
+#' @template team_drive-singular
 #'
-#' @template dribble-return
+#' @eval return_dribble(extras = "If the target files were specified via `path`,
+#'   there will be a `path` column.")
 #' @export
 #'
-#' @examples
-#' \dontrun{
-#' ## get info about your "My Drive" root folder
+#' @examplesIf drive_has_token()
+#' # get info about your "My Drive" root folder
 #' drive_get("~/")
-#' ## the API reserves the file id "root" for your root folder
+#' # the API reserves the file id "root" for your root folder
 #' drive_get(id = "root")
 #' drive_get(id = "root") %>% drive_reveal("path")
 #'
-#' ## The examples below are indicative of correct syntax.
-#' ## But note these will generally result in an error or a
-#' ## 0-row dribble, unless you replace the inputs with paths
-#' ## or file ids that exist in your Drive.
+#' # set up some files to get by path
+#' alfalfa <- drive_mkdir("alfalfa")
+#' broccoli <- drive_upload(
+#'   drive_example_local("chicken.txt"),
+#'   name = "broccoli", path = alfalfa
+#' )
+#' drive_get("broccoli")
+#' drive_get("alfalfa/broccoli")
+#' drive_get("~/alfalfa/broccoli")
+#' drive_get(c("broccoli", "alfalfa/", "~/alfalfa/broccoli"))
 #'
-#' ## multiple names
+#' # clean up
+#' drive_rm(alfalfa)
+#'
+#' \dontrun{
+#' # The examples below are indicative of correct syntax.
+#' # But note these will generally result in an error or a
+#' # 0-row dribble, unless you replace the inputs with paths
+#' # or file ids that exist in your Drive.
+#'
+#' # multiple names
 #' drive_get(c("abc", "def"))
 #'
-#' ## multiple names, one of which must be a folder
+#' # multiple names, one of which must be a folder
 #' drive_get(c("abc", "def/"))
 #'
-#' ## query by file id(s)
+#' # query by file id(s)
 #' drive_get(id = "abcdefgeh123456789")
 #' drive_get(as_id("abcdefgeh123456789"))
 #' drive_get(id = c("abcdefgh123456789", "jklmnopq123456789"))
 #'
-#' ## apply to a browser URL for, e.g., a Google Sheet
+#' # apply to a browser URL for, e.g., a Google Sheet
 #' my_url <- "https://docs.google.com/spreadsheets/d/FILE_ID/edit#gid=SHEET_ID"
 #' drive_get(my_url)
 #' drive_get(as_id(my_url))
 #' drive_get(id = my_url)
 #'
-#' ## access the Team Drive named "foo"
-#' ## team_drive params must be specified if getting by path
-#' foo <- team_drive_get("foo")
-#' drive_get(c("this.jpg", "that-file"), team_drive = foo)
-#' ## team_drive params are not necessary if getting by id
+#' # access the shared drive named "foo"
+#' # shared_drive params must be specified if getting by path
+#' foo <- shared_drive_get("foo")
+#' drive_get(c("this.jpg", "that-file"), shared_drive = foo)
+#' # shared_drive params are not necessary if getting by id
 #' drive_get(as_id("123456789"))
 #'
-#' ## search all Team Drives and other files user has accessed
-#' drive_get(c("this.jpg", "that-file"), corpus = "all")
+#' # search all shared drives and other files user has accessed
+#' drive_get(c("this.jpg", "that-file"), corpus = "allDrives")
 #' }
 drive_get <- function(path = NULL,
                       id = NULL,
-                      team_drive = NULL,
+                      shared_drive = NULL,
                       corpus = NULL,
-                      verbose = TRUE) {
+                      verbose = deprecated(),
+                      team_drive = deprecated()) {
+  warn_for_verbose(verbose)
   if (length(path) + length(id) == 0) return(dribble_with_path())
   stopifnot(is.null(path) || is.character(path))
   stopifnot(is.null(id) || is.character(id))
+
+  if (lifecycle::is_present(team_drive)) {
+    lifecycle::deprecate_warn(
+      "2.0.0",
+      "drive_get(team_drive)",
+      "drive_get(shared_drive)"
+    )
+    shared_drive <- shared_drive %||% team_drive
+  }
 
   if (!is.null(path) && any(is_drive_url(path))) {
     path <- as_id(path)
   }
 
-  if (!is.null(path) && inherits(path, "drive_id")) {
+  if (!is.null(path) && is_drive_id(path)) {
     id <- path
     path <- NULL
   }
 
   if (is.null(path)) {
-    as_dribble(purrr::map(as_id(id), get_one_file))
+    as_dribble(map(as_id(id), get_one_file_id))
   } else {
-    dribble_from_path(path, team_drive, corpus)
+    drive_get_path(path, shared_drive, corpus)
   }
 }
 
-get_one_file <- function(id) {
-  ## when id = "", drive.files.get actually becomes a call to drive.files.list
-  ## and, therefore, returns 100 files by default ... don't let that happen
-  if (!isTRUE(nzchar(id, keepNA = TRUE))) {
-    stop_glue("File ids must not be NA and cannot be the empty string.")
+get_one_file_id <- function(id) {
+  if (is.na(id)) {
+    drive_abort("Can't {.fun drive_get} a file when {.arg id} is {.code NA}.")
   }
+  # drive_id validity checks catch the id = "" case, but just FYI:
+  # when id = "", drive.files.get actually becomes a call to drive.files.list
+  # and, therefore, returns 100 files by default; this is a bad thing
   request <- request_generate(
     endpoint = "drive.files.get",
     params = list(
@@ -112,12 +168,4 @@ get_one_file <- function(id) {
   )
   response <- request_make(request)
   gargle::response_process(response)
-}
-
-dribble_with_path <- function() {
-  put_column(dribble(), nm = "path", val = character(), .after = "name")
-}
-
-dribble_with_path_for_root <- function() {
-  put_column(root_folder(), nm = "path", val = "~/", .after = "name")
 }

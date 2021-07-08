@@ -11,7 +11,7 @@
 #'   The goal is to allow Drive access that feels similar to Unix file system
 #'   utilities, e.g., `find`, `ls`, `mv`, `cp`, `mkdir`, and `rm`.
 #'
-#'   The metadata for one or more Drive files is held in a `dribble`, a "Drive
+#'   The metadata for one or more Drive files is held in a [`dribble`], a "Drive
 #'   tibble". This is a data frame with one row per file. A dribble is returned
 #'   (and accepted) by almost every function in googledrive. It is designed to
 #'   give people what they want (file name), track what the API wants (file id),
@@ -21,24 +21,58 @@
 #'   require its use.
 #'
 #'   Please see the googledrive website for full documentation:
+
 #'   * <https://googledrive.tidyverse.org/index.html>
+
 #'
-#'   In addition to function-specific help, there are several articles which are
-#'   indexed here:
-#'   * [Article index](https://googledrive.tidyverse.org/articles/index.html)
+#' In addition to function-specific help, there are several articles which are
+#' indexed here:
+
+#' * [Article index](https://googledrive.tidyverse.org/articles/index.html)
+
 #'
-#' @importFrom rlang %||% :=
-#' @importFrom glue glue glue_data
 #' @keywords internal
+#' @import rlang
+#' @import vctrs
 "_PACKAGE"
 
+## usethis namespace: start
+#' @importFrom gargle bulletize
+#' @importFrom gargle gargle_map_cli
+#' @importFrom glue glue
+#' @importFrom glue glue_collapse
+#' @importFrom glue glue_data
+#' @importFrom lifecycle deprecated
+#' @importFrom pillar pillar_shaft
+#' @importFrom purrr map
+#' @importFrom purrr map_chr
+#' @importFrom purrr map_if
+#' @importFrom purrr map_int
+#' @importFrom purrr map_lgl
+#' @importFrom purrr map2
+#' @importFrom purrr pluck
+#' @importFrom tibble as_tibble
+#' @importFrom tibble tbl_sum
+#' @importFrom tibble tibble
+## usethis namespace: end
+NULL
 
-## This function is never called
-## Exists to suppress this NOTE:
-## "Namespaces in Imports field not imported from:"
-## https://github.com/opencpu/opencpu/blob/10469ee3ddde0d0dca85bd96d2873869d1a64cd6/R/utils.R#L156-L165
-stub <- function() {
-  ## I have to use curl directly somewhere, if I import it.
-  ## I have to import it if I want to state a minimum version.
-  curl::curl_version()
-}
+#' googledrive configuration
+#'
+#' @description
+#' Some aspects of googledrive behaviour can be controlled via an option.
+#'
+#' @section Auth:
+#'
+#' Read about googledrive's main auth function, [drive_auth()]. It is powered
+#' by the gargle package, which consults several options:
+#' * Default Google user or, more precisely, `email`: see
+#'   [gargle::gargle_oauth_email()]
+#' * Whether or where to cache OAuth tokens: see
+#'   [gargle::gargle_oauth_cache()]
+#' * Whether to prefer "out-of-band" auth: see
+#'   [gargle::gargle_oob_default()]
+#' * Application Default Credentials: see [gargle::credentials_app_default()]
+#'
+#' @name googledrive-configuration
+NULL

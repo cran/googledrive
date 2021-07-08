@@ -3,89 +3,90 @@
 #' Copies an existing Drive file into a new file id.
 #'
 #' @seealso Wraps the `files.copy` endpoint:
-#'   * <https://developers.google.com/drive/v3/reference/files/copy>
+#'   * <https://developers.google.com/drive/api/v3/reference/files/copy>
 #'
 #' @template file-singular
-#' @template path
-#' @templateVar name file
-#' @templateVar default {}
-#' @template name
-#' @templateVar name file
-#' @templateVar default Defaults to "Copy of `FILE-NAME`".
+#' @eval param_path(
+#'   thing = "new file",
+#'   default_notes = "By default, the new file has the same parent folder as the
+#'      source file."
+#' )
+#' @eval param_name(
+#'   thing = "file",
+#'   default_notes = "Defaults to \"Copy of `FILE-NAME`\"."
+#' )
 #' @template dots-metadata
 #' @template overwrite
 #' @template verbose
-#' @template dribble-return
+#' @eval return_dribble()
+#' @export
 #'
-#' @examples
-#' \dontrun{
-#' ## Create a file to copy
-#' file <- drive_upload(drive_example("chicken.txt"), "chicken-cp.txt")
+#' @examplesIf drive_has_token()
+#' # Target one of the official example files
+#' (src_file <- drive_example_remote("chicken.txt"))
 #'
-#' ## Make a "Copy of" copy in same folder as the original
-#' drive_cp("chicken-cp.txt")
+#' # Make a "Copy of" copy in your My Drive
+#' cp1 <- drive_cp(src_file)
 #'
-#' ## Make an explicitly named copy in same folder as the original
-#' drive_cp("chicken-cp.txt", "chicken-cp-two.txt")
+#' # Make an explicitly named copy, in a different folder, and star it.
+#' # The starring is an example of providing metadata via `...`.
+#' # `starred` is not an actual argument to `drive_cp()`,
+#' # it just gets passed through to the API.
+#' folder <- drive_mkdir("drive-cp-folder")
+#' cp2 <- drive_cp(
+#'   src_file,
+#'   path = folder,
+#'   name = "chicken-cp.txt",
+#'   starred = TRUE
+#' )
+#' drive_reveal(cp2, "starred")
 #'
-#' ## Make an explicitly named copy in a different folder
-#' folder <- drive_mkdir("new-folder")
-#' drive_cp("chicken-cp.txt", path = folder, name = "chicken-cp-three.txt")
+#' # `overwrite = FALSE` errors if file already exists at target filepath
+#' # THIS WILL ERROR!
+#' # drive_cp(src_file, name = "Copy of chicken.txt", overwrite = FALSE)
 #'
-#' ## Make an explicitly named copy and star it.
-#' ## The starring is an example of providing metadata via `...`.
-#' ## `starred` is not an actual argument to `drive_cp()`,
-#' ## it just gets passed through to the API.
-#' drive_cp("chicken-cp.txt", name = "chicken-cp-starred.txt", starred = TRUE)
+#' # `overwrite = TRUE` moves an existing file to trash, then proceeds
+#' cp3 <- drive_cp(src_file, name = "Copy of chicken.txt", overwrite = TRUE)
 #'
-#' ## `overwrite = FALSE` errors if file already exists at target filepath
-#' ## THIS WILL ERROR!
-#' drive_cp("chicken-cp.txt", name = "chicken-cp.txt", overwrite = FALSE)
+#' # Delete all of our copies and the new folder!
+#' drive_rm(cp1, cp2, cp3, folder)
 #'
-#' ## `overwrite = TRUE` moves an existing file to trash, then proceeds
-#' drive_cp("chicken-cp.txt", name = "chicken-cp.txt", overwrite = TRUE)
+#' # Target an official example file that's a csv file
+#' (csv_file <- drive_example_remote("chicken.csv"))
 #'
-#' ## Behold all of our copies!
-#' drive_find("chicken-cp")
-#'
-#' ## Delete all of our copies and the new folder!
-#' drive_find("chicken-cp") %>% drive_rm()
-#' drive_rm(folder)
-#'
-#' ## upload a csv file to copy
-#' csv_file <- drive_upload(drive_example("chicken.csv"))
-#'
-#' ## copy AND AT THE SAME TIME convert it to a Google Sheet
+#' # copy AND AT THE SAME TIME convert it to a Google Sheet
 #' chicken_sheet <- drive_cp(
 #'   csv_file,
-#'   name = "chicken-cp",
+#'   name = "chicken-sheet-copy",
 #'   mime_type = drive_mime_type("spreadsheet")
 #' )
+#' # is it really a Google Sheet?
+#' drive_reveal(chicken_sheet, "mime_type")$mime_type
 #'
-#' ## go see the new Sheet in the browser
-#' ## drive_browse(chicken_sheet)
+#' # go see the new Sheet in the browser
+#' # drive_browse(chicken_sheet)
 #'
-#' ## clean up
-#' drive_rm(csv_file, chicken_sheet)
-#' }
-#' @export
+#' # clean up
+#' drive_rm(chicken_sheet)
 drive_cp <- function(file,
                      path = NULL,
                      name = NULL,
                      ...,
                      overwrite = NA,
-                     verbose = TRUE) {
+                     verbose = deprecated()) {
+  warn_for_verbose(verbose)
+
   file <- as_dribble(file)
   file <- confirm_single_file(file)
   if (is_parental(file)) {
-    stop_glue("The Drive API does not copy folders or Team Drives.")
+    drive_abort("The Drive API does not copy folders or shared drives.")
   }
 
   tmp <- rationalize_path_name(path, name)
   path <- tmp$path
   name <- tmp$name
 
-  params <- toCamel(rlang::list2(...))
+  params <- toCamel(list2(...))
 
   # load (path, name) into params
   if (!is.null(path)) {
@@ -102,14 +103,24 @@ drive_cp <- function(file,
     endpoint = "drive.files.copy",
     params = params
   )
-  res <- request_make(request, encode = "json")
+  res <- request_make(request)
   proc_res <- gargle::response_process(res)
-
   out <- as_dribble(list(proc_res))
 
-  if (verbose) {
-    new_path <- paste0(append_slash(path$name), out$name)
-    message_glue("\nFile copied:\n  * {file$name} -> {new_path}")
-  }
+  drive_bullets(c(
+    "Original file:",
+    bulletize(gargle_map_cli(file)),
+    "Copied to file:",
+    # drive_reveal_path() puts immediate parent, if specified, in the `path`
+    # then we reveal `path`, instead of `name`
+    bulletize(gargle_map_cli(
+      drive_reveal_path(out, ancestors = path),
+      template = c(
+        id_string = "<id:\u00a0<<id>>>", # \u00a0 is a nonbreaking space
+        out = "{.drivepath <<path>>} {cli::col_grey('<<id_string>>')}"
+      )
+    ))
+  ))
+
   invisible(out)
 }

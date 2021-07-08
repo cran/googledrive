@@ -3,11 +3,10 @@
 #' This is the closest googledrive function to what you can do at
 #' <https://drive.google.com>: by default, you just get a listing of your files.
 #' You can also search in various ways, e.g., filter by file type or ownership
-#' or even work with [Team Drive files][team_drives], if you have access. This
-#' is a very powerful function. Together with the more specific [drive_get()],
-#' this is the main way to identify files to target for downstream work.
-#'
-#' @template team-drives-description
+#' or work with [shared drives][shared_drives]. This is a very powerful
+#' function. Together with the more specific [drive_get()], this is the main way
+#' to identify files to target for downstream work. If you know you want to
+#' search within a specific folder or shared drive, use [drive_ls()].
 
 #' @section File type:
 #'
@@ -35,18 +34,19 @@
 #'   files in your result have high "recency" (whatever that means). To suppress
 #'   sending `orderBy` at all, do `drive_find(orderBy = NULL)`. The `orderBy`
 #'   parameter accepts sort keys in addition to `recency`, which are documented
-#'   in the [`files.list` endpoint](https://developers.google.com/drive/v3/reference/files/list).
+#'   in the [`files.list` endpoint](https://developers.google.com/drive/api/v3/reference/files/list).
 #'   googledrive translates a snake_case specification of `order_by` into the
 #'   lowerCamel form, `orderBy`.
 
-#' @section Team Drives:
+#' @section Shared drives and domains:
 #'
-#' If you have access to Team Drives, you'll know. Use `team_drive` or `corpus`
-#' to search one or more Team Drives or a domain. See
-#' [Access Team Drives][team_drives] for more.
+#'   If you work with shared drives and/or Google Workspace, you can apply your
+#'   search query to collections of items beyond those associated with "My
+#'   Drive". Use the `shared_drive` or `corpus` arguments to control this.
+#'   Read more about [shared drives][shared_drives].
 
 #' @seealso Wraps the `files.list` endpoint:
-#'   * <https://developers.google.com/drive/v3/reference/files/list>
+#'   * <https://developers.google.com/drive/api/v3/reference/files/list>
 #'
 #' Helpful resource for forming your own queries:
 #'   * <https://developers.google.com/drive/api/v3/search-files>
@@ -60,14 +60,15 @@
 #'   Can be anything that [drive_mime_type()] knows how to handle. This is
 #'   processed by googledrive and sent as a query parameter.
 #' @template n_max
-#' @template team_drive-singular
+#' @template shared_drive-singular
 #' @template corpus
 #' @param ... Other parameters to pass along in the request. The most likely
 #'   candidate is `q`. See below and the API's
 #'   [Search for files and folders guide](https://developers.google.com/drive/api/v3/search-files).
 #' @template verbose
+#' @template team_drive-singular
 #'
-#' @template dribble-return
+#' @eval return_dribble()
 #' @examples
 #' \dontrun{
 #' # list "My Drive" w/o regard for folder hierarchy
@@ -82,7 +83,11 @@
 #' drive_find(q = "mimeType='application/vnd.google-apps.spreadsheet'")
 #'
 #' # files whose names match a regex
-#' drive_find(pattern = "jt")
+#' # the local, general, sometimes-slow-to-execute version
+#' drive_find(pattern = "ick")
+#' # the server-side, executes-faster version
+#' # NOTE: works only for a pattern at the beginning of file name
+#' drive_find(q = "name contains 'chick'")
 #'
 #' # search for files located directly in your root folder
 #' drive_find(q = "'root' in parents")
@@ -99,7 +104,7 @@
 #' # various ways to specify q search clauses
 #' # multiple q's
 #' drive_find(q = "name contains 'TEST'",
-#'            q = "modifiedTime > '2017-07-21T12:00:00'")
+#'            q = "modifiedTime > '2020-07-21T12:00:00'")
 #' # vector q
 #' drive_find(q = c("starred = true", "visibility = 'anyoneWithLink'"))
 #'
@@ -113,8 +118,9 @@
 #' drive_find(order_by = NULL, n_max = 5)
 #'
 #' # sort on various keys
-#' drive_find(order_by = "quotaBytesUsed", n_max = 5)
 #' drive_find(order_by = "modifiedByMeTime", n_max = 5)
+#' # request descending order
+#' drive_find(order_by = "quotaBytesUsed desc", n_max = 5)
 #' }
 #'
 #' @export
@@ -122,20 +128,32 @@ drive_find <- function(pattern = NULL,
                        trashed = FALSE,
                        type = NULL,
                        n_max = Inf,
-                       team_drive = NULL,
+                       shared_drive = NULL,
                        corpus = NULL,
                        ...,
-                       verbose = TRUE) {
+                       verbose = deprecated(),
+                       team_drive = deprecated()) {
+  warn_for_verbose(verbose)
   if (!is.null(pattern) && !(is_string(pattern))) {
-    stop_glue("`pattern` must be a character string.")
+    drive_abort("{.arg pattern} must be a character string.")
   }
   stopifnot(is_toggle(trashed))
   stopifnot(is.numeric(n_max), n_max >= 0, length(n_max) == 1)
+
+  if (lifecycle::is_present(team_drive)) {
+    lifecycle::deprecate_warn(
+      "2.0.0",
+      "drive_find(team_drive)",
+      "drive_find(shared_drive)"
+    )
+    shared_drive <- shared_drive %||% team_drive
+  }
+
   if (n_max < 1) return(dribble())
 
-  params <- toCamel(rlang::list2(...))
+  params <- toCamel(list2(...))
   params[["fields"]] <- params[["fields"]] %||% "*"
-  if (!rlang::has_name(params, "orderBy")) {
+  if (!has_name(params, "orderBy")) {
     params[["orderBy"]] <- "recency desc"
   }
   params <- marshal_q_clauses(params)
@@ -158,18 +176,17 @@ drive_find <- function(pattern = NULL,
 
   params$q <- and(params$q)
 
-  params <- append(params, handle_team_drives(team_drive, corpus))
+  params <- append(params, handle_shared_drives(shared_drive, corpus))
 
   request <- request_generate(endpoint = "drive.files.list", params = params)
   proc_res_list <- do_paginated_request(
     request,
     n_max = n_max,
-    n = function(x) length(x$files),
-    verbose = verbose
+    n = function(x) length(x$files)
   )
 
   res_tbl <- proc_res_list %>%
-    purrr::map("files") %>%
+    map("files") %>%
     purrr::flatten() %>%
     as_dribble()
 
@@ -202,20 +219,26 @@ marshal_q_clauses <- function(params) {
   c(params[["unmatched"]], q = list(q_bits))
 }
 
-handle_team_drives <- function(team_drive, corpus) {
-  if (!is.null(team_drive)) {
-    team_drive <- as_team_drive(team_drive)
-    if (no_file(team_drive)) {
-      stop(
-        "Can't find the requested `team_drive`.",
-        call. = FALSE
-      )
+# https://developers.google.com/drive/api/v3/search-shareddrives#query_multiple_terms_with_parentheses
+parenthesize <- function(x) glue("({x})")
+and <- function(x) glue_collapse(parenthesize(x), sep = " and ")
+or <- function(x) glue_collapse(x, sep = " or ")
+
+handle_shared_drives <- function(shared_drive, corpus) {
+  if (!is.null(shared_drive)) {
+    shared_drive <- as_shared_drive(shared_drive)
+    if (no_file(shared_drive)) {
+      drive_abort("Can't find the requested {.arg shared_drive}.")
     }
-    team_drive <- as_id(team_drive)
+    shared_drive <- as_id(shared_drive)
   }
   if (identical(corpus, "all")) {
-    corpus <- "user,allTeamDrives"
+    lifecycle::deprecate_warn(
+      "2.0.0",
+      "drive_find(corpus = 'now expects \"allDrives\" instead of \"all\"')"
+    )
+    corpus <- "allDrives"
   }
-  if (is.null(team_drive) && is.null(corpus)) return(NULL)
-  team_drive_params(team_drive, corpus)
+  if (is.null(shared_drive) && is.null(corpus)) return()
+  shared_drive_params(shared_drive, corpus)
 }

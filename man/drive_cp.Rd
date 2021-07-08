@@ -4,7 +4,14 @@
 \alias{drive_cp}
 \title{Copy a Drive file}
 \usage{
-drive_cp(file, path = NULL, name = NULL, ..., overwrite = NA, verbose = TRUE)
+drive_cp(
+  file,
+  path = NULL,
+  name = NULL,
+  ...,
+  overwrite = NA,
+  verbose = deprecated()
+)
 }
 \arguments{
 \item{file}{Something that identifies the file of interest on your Google
@@ -12,20 +19,26 @@ Drive. Can be a name or path, a file id or URL marked with \code{\link[=as_id]{a
 \code{\link{dribble}}.}
 
 \item{path}{Specifies target destination for the new file on Google
-Drive. Can be an actual path (character), a file id marked with \code{\link[=as_id]{as_id()}},
-or a \code{\link{dribble}}. If specified as an actual path, it is best to explicitly
-indicate if it's a folder by including a trailing slash, since it cannot
-always be worked out from the context of the call. Defaults to "Copy of \code{FILE-NAME}".}
+Drive. Can be an actual path (character), a file id marked with
+\code{\link[=as_id]{as_id()}}, or a \code{\link{dribble}}.
+
+If \code{path} is a shortcut to a folder, it is automatically resolved to its
+target folder.
+
+If \code{path} is given as a path (as opposed to a \code{dribble} or an id), it is
+best to explicitly indicate if it's a folder by including a trailing
+slash, since it cannot always be worked out from the context of the call.
+By default, the new file has the same parent folder as the
+source file.}
 
 \item{name}{Character, new file name if not specified as part of
-\code{path}. This will force \code{path} to be treated as a folder, even if it is
-character and lacks a trailing slash. Defaults to "Copy of \code{FILE-NAME}".}
+\code{path}. This will force \code{path} to be interpreted as a folder, even if it
+is character and lacks a trailing slash. Defaults to "Copy of \code{FILE-NAME}".}
 
-\item{...}{Named parameters to pass along to the Drive API. Has the tidy dots
-semantics that come from using \code{\link[rlang:list2]{rlang::list2()}}. You can affect the
-metadata of the target file by specifying properties of the Files resource
-via \code{...}. Read the "Request body" section of the Drive API docs for the
-associated endpoint to learn about relevant parameters.}
+\item{...}{Named parameters to pass along to the Drive API. Has \link[rlang:dyn-dots]{dynamic dots} semantics. You can affect the metadata of the target file by
+specifying properties of the Files resource via \code{...}. Read the "Request
+body" section of the Drive API docs for the associated endpoint to learn
+about relevant parameters.}
 
 \item{overwrite}{Logical, indicating whether to check for a pre-existing file
 at the targetted "filepath". The quotes around "filepath" refer to the fact
@@ -45,70 +58,72 @@ thrown if two or more pre-existing files are found.
 Note that existence checks, based on filepath, are expensive operations, i.e.
 they require additional API calls.}
 
-\item{verbose}{Logical, indicating whether to print informative messages
-(default \code{TRUE}).}
+\item{verbose}{\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#deprecated}{\figure{lifecycle-deprecated.svg}{options: alt='[Deprecated]'}}}{\strong{[Deprecated]}} This logical argument to
+individual googledrive functions is deprecated. To globally suppress
+googledrive messaging, use \code{options(googledrive_quiet = TRUE)} (the default
+behaviour is to emit informational messages). To suppress messaging in a
+more limited way, use the helpers \code{\link[=local_drive_quiet]{local_drive_quiet()}} or
+\code{\link[=with_drive_quiet]{with_drive_quiet()}}.}
 }
 \value{
-An object of class \code{\link{dribble}}, a tibble with one row per item.
+An object of class \code{\link{dribble}}, a tibble with one row per file.
 }
 \description{
 Copies an existing Drive file into a new file id.
 }
 \examples{
-\dontrun{
-## Create a file to copy
-file <- drive_upload(drive_example("chicken.txt"), "chicken-cp.txt")
+\dontshow{if (drive_has_token()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+# Target one of the official example files
+(src_file <- drive_example_remote("chicken.txt"))
 
-## Make a "Copy of" copy in same folder as the original
-drive_cp("chicken-cp.txt")
+# Make a "Copy of" copy in your My Drive
+cp1 <- drive_cp(src_file)
 
-## Make an explicitly named copy in same folder as the original
-drive_cp("chicken-cp.txt", "chicken-cp-two.txt")
+# Make an explicitly named copy, in a different folder, and star it.
+# The starring is an example of providing metadata via `...`.
+# `starred` is not an actual argument to `drive_cp()`,
+# it just gets passed through to the API.
+folder <- drive_mkdir("drive-cp-folder")
+cp2 <- drive_cp(
+  src_file,
+  path = folder,
+  name = "chicken-cp.txt",
+  starred = TRUE
+)
+drive_reveal(cp2, "starred")
 
-## Make an explicitly named copy in a different folder
-folder <- drive_mkdir("new-folder")
-drive_cp("chicken-cp.txt", path = folder, name = "chicken-cp-three.txt")
+# `overwrite = FALSE` errors if file already exists at target filepath
+# THIS WILL ERROR!
+# drive_cp(src_file, name = "Copy of chicken.txt", overwrite = FALSE)
 
-## Make an explicitly named copy and star it.
-## The starring is an example of providing metadata via `...`.
-## `starred` is not an actual argument to `drive_cp()`,
-## it just gets passed through to the API.
-drive_cp("chicken-cp.txt", name = "chicken-cp-starred.txt", starred = TRUE)
+# `overwrite = TRUE` moves an existing file to trash, then proceeds
+cp3 <- drive_cp(src_file, name = "Copy of chicken.txt", overwrite = TRUE)
 
-## `overwrite = FALSE` errors if file already exists at target filepath
-## THIS WILL ERROR!
-drive_cp("chicken-cp.txt", name = "chicken-cp.txt", overwrite = FALSE)
+# Delete all of our copies and the new folder!
+drive_rm(cp1, cp2, cp3, folder)
 
-## `overwrite = TRUE` moves an existing file to trash, then proceeds
-drive_cp("chicken-cp.txt", name = "chicken-cp.txt", overwrite = TRUE)
+# Target an official example file that's a csv file
+(csv_file <- drive_example_remote("chicken.csv"))
 
-## Behold all of our copies!
-drive_find("chicken-cp")
-
-## Delete all of our copies and the new folder!
-drive_find("chicken-cp") \%>\% drive_rm()
-drive_rm(folder)
-
-## upload a csv file to copy
-csv_file <- drive_upload(drive_example("chicken.csv"))
-
-## copy AND AT THE SAME TIME convert it to a Google Sheet
+# copy AND AT THE SAME TIME convert it to a Google Sheet
 chicken_sheet <- drive_cp(
   csv_file,
-  name = "chicken-cp",
+  name = "chicken-sheet-copy",
   mime_type = drive_mime_type("spreadsheet")
 )
+# is it really a Google Sheet?
+drive_reveal(chicken_sheet, "mime_type")$mime_type
 
-## go see the new Sheet in the browser
-## drive_browse(chicken_sheet)
+# go see the new Sheet in the browser
+# drive_browse(chicken_sheet)
 
-## clean up
-drive_rm(csv_file, chicken_sheet)
-}
+# clean up
+drive_rm(chicken_sheet)
+\dontshow{\}) # examplesIf}
 }
 \seealso{
 Wraps the \code{files.copy} endpoint:
 \itemize{
-\item \url{https://developers.google.com/drive/v3/reference/files/copy}
+\item \url{https://developers.google.com/drive/api/v3/reference/files/copy}
 }
 }

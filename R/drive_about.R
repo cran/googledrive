@@ -5,21 +5,19 @@
 #' useful information (the information on current user) and prints it nicely.
 #'
 #' @seealso Wraps the `about.get` endpoint:
-#'   * <https://developers.google.com/drive/v3/reference/about/get>
+#'   * <https://developers.google.com/drive/api/v3/reference/about/get>
 #'
 #' @return A list representation of a Drive
-#'   [about resource](https://developers.google.com/drive/v3/reference/about#resource)
+#'   [about resource](https://developers.google.com/drive/api/v3/reference/about)
 #' @export
 #'
-#' @examples
-#' \dontrun{
+#' @examplesIf drive_has_token()
 #' drive_about()
 #'
-#' ## explore the names of available Team Drive themes
+#' # explore the export formats available for Drive files, by MIME type
 #' about <- drive_about()
-#' about[["teamDriveThemes"]] %>%
-#'   purrr::map_chr("id")
-#' }
+#' about[["exportFormats"]] %>%
+#'   purrr::map(unlist)
 drive_about <- function() {
   request <- request_generate(
     endpoint = "drive.about.get",

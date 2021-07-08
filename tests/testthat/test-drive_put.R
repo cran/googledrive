@@ -1,6 +1,6 @@
 # ---- nm_fun ----
-me_ <- nm_fun("TEST-drive-put")
-nm_ <- nm_fun("TEST-drive-put", NULL)
+me_ <- nm_fun("TEST-drive_put")
+nm_ <- nm_fun("TEST-drive_put", user_run = FALSE)
 
 # ---- clean ----
 if (CLEAN) {
@@ -21,43 +21,65 @@ test_that("drive_put() works", {
   skip_if_offline()
 
   local_file <- tempfile(me_("foo"), fileext = ".txt")
+  put_file <- basename(local_file)
   download_target <- tempfile(me_("download"), fileext = ".txt")
-  on.exit({
+  withr::defer({
     unlink(local_file)
     unlink(download_target)
-    drive_rm(drive_find(me_("foo")))
   })
+  defer_drive_rm(drive_find(me_("foo")))
 
-  writeLines(c("beginning", "middle"), local_file)
+  write_utf8(c("beginning", "middle"), local_file)
 
-  expect_message(
+  local_drive_loud_and_wide()
+  first_put <- capture.output(
     original <- drive_put(local_file),
-    "drive_upload"
+    type = "message"
   )
-  expect_s3_class(original, "dribble")
+  first_put <- first_put %>%
+    scrub_filepath(local_file) %>%
+    scrub_filepath(put_file) %>%
+    scrub_file_id()
+  expect_snapshot(
+    write_utf8(first_put)
+  )
+  expect_dribble(original)
 
-  drive_download(original, path = download_target)
+  with_drive_quiet(
+    drive_download(original, path = download_target)
+  )
   expect_identical(
-    readLines(local_file),
-    readLines(download_target)
+    read_utf8(local_file),
+    read_utf8(download_target)
   )
 
   cat("end", file = local_file, sep = "\n", append = TRUE)
 
-  expect_message(
+  second_put <- capture.output(
     second <- drive_put(local_file),
-    "drive_update"
+    type = "message"
+  )
+  second_put <- second_put %>%
+    scrub_filepath(put_file) %>%
+    scrub_file_id()
+  expect_snapshot(
+    write_utf8(second_put)
   )
   expect_identical(original$id, second$id)
 
-  drive_download(original, path = download_target, overwrite = TRUE)
+  with_drive_quiet(
+    drive_download(original, path = download_target, overwrite = TRUE)
+  )
   expect_identical(
-    readLines(local_file),
-    readLines(download_target)
+    read_utf8(local_file),
+    read_utf8(download_target)
   )
 
-  name_collider <- drive_create(basename(local_file))
+  with_drive_quiet(
+    name_collider <- drive_create(basename(local_file))
+  )
 
+  # not easy to convert to snapshot, due to volatile file ids
   expect_error(
     drive_put(local_file),
     "Multiple items"

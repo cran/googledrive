@@ -1,7 +1,5 @@
-context("Download files")
-
 # ---- nm_fun ----
-nm_ <- nm_fun("TEST-drive-download", NULL)
+nm_ <- nm_fun("TEST-drive_download", user_run = FALSE)
 
 # ---- clean ----
 if (CLEAN) {
@@ -23,75 +21,129 @@ if (SETUP) {
 
 # ---- tests ----
 test_that("drive_download() won't overwrite existing file", {
-  on.exit(unlink("save_me.txt"))
-  writeLines("I exist", "save_me.txt")
-  expect_error(
-    drive_download(dribble(), path = "save_me.txt"),
-    "Path exists and overwrite is FALSE"
+  tmpdir <-  withr::local_tempdir()
+  precious_filepath <- paste0(nm_("precious"), ".txt")
+  write_utf8("I exist and I am special", file.path(tmpdir, precious_filepath))
+  expect_snapshot(
+    withr::with_dir(
+      tmpdir,
+      drive_download(dribble(), path = precious_filepath)
+    ),
+    error = TRUE
   )
 })
 
 test_that("drive_download() downloads a file and adds local_path column", {
   skip_if_no_token()
   skip_if_offline()
-  local_path <- paste0(nm_("DESC"), ".txt")
-  on.exit(unlink(local_path))
 
-  expect_message(
-    out <- drive_download(nm_("DESC"), path = local_path, overwrite = TRUE),
-    "File downloaded"
+  file_to_download <- nm_("DESC")
+  download_filepath <- withr::local_file(
+    tempfile(file_to_download, fileext = ".txt")
   )
-  expect_true(file.exists(local_path))
-  expect_identical(out$local_path, local_path)
+
+  local_drive_loud_and_wide()
+  drive_download_message <- capture.output(
+    out <- drive_download(file_to_download, path = download_filepath),
+    type = "message"
+  )
+  # the order of scrubbing matters here
+  drive_download_message <- drive_download_message %>%
+    scrub_filepath(download_filepath) %>%
+    scrub_filepath(file_to_download) %>%
+    scrub_file_id()
+
+  expect_snapshot(
+    write_utf8(drive_download_message)
+  )
+
+  expect_true(file.exists(download_filepath))
+  expect_identical(out$local_path, download_filepath)
 })
 
 test_that("drive_download() errors if file does not exist on Drive", {
   skip_if_no_token()
   skip_if_offline()
-  expect_error(
-    drive_download(nm_("this-should-not-exist")),
-    "does not identify at least one"
-  )
+  expect_snapshot(drive_download(nm_("this-should-not-exist")), error = TRUE)
 })
 
 test_that("drive_download() converts with explicit `type`", {
   skip_if_no_token()
   skip_if_offline()
 
-  nm <- paste0(nm_("DESC-doc"), ".docx")
-  on.exit(unlink(nm))
+  file_to_download <- nm_("DESC-doc")
+  tmpdir <- withr::local_tempdir(file_to_download)
+  download_filename <- paste0(file_to_download, ".docx")
+  local_drive_loud_and_wide()
 
-  expect_message(
-    drive_download(file = nm_("DESC-doc"), type = "docx"),
-    "File downloaded"
+  drive_download_message <- capture.output(
+    withr::with_dir(
+      tmpdir,
+      drive_download(file = file_to_download, type = "docx")
+    ),
+    type = "message"
   )
-  expect_true(file.exists(nm))
+  drive_download_message <- drive_download_message %>%
+    scrub_filepath(download_filename) %>%
+    scrub_filepath(file_to_download) %>%
+    scrub_file_id()
+  expect_snapshot(
+    write_utf8(drive_download_message)
+  )
+
+  expect_true(file.exists(file.path(tmpdir, download_filename)))
 })
 
 test_that("drive_download() converts with type implicit in `path`", {
   skip_if_no_token()
   skip_if_offline()
 
-  nm <- paste0(nm_("DESC-doc"), ".docx")
-  on.exit(unlink(nm))
+  file_to_download <- nm_("DESC-doc")
+  tmpdir <- withr::local_tempdir(file_to_download)
+  download_filename <- paste0(file_to_download, ".docx")
+  local_drive_loud_and_wide()
 
-  expect_message(
-    drive_download(file = nm_("DESC-doc"), path = nm),
-    "File downloaded"
+  drive_download_message <- capture.output(
+    withr::with_dir(
+      tmpdir,
+      drive_download(file = file_to_download, path = download_filename)
+    ),
+    type = "message"
   )
-  expect_true(file.exists(nm))
+  drive_download_message <- drive_download_message %>%
+    scrub_filepath(download_filename) %>%
+    scrub_filepath(file_to_download) %>%
+    scrub_file_id()
+  expect_snapshot(
+    write_utf8(drive_download_message)
+  )
+
+  expect_true(file.exists(file.path(tmpdir, download_filename)))
 })
 
 test_that("drive_download() converts using default MIME type, if necessary", {
   skip_if_no_token()
   skip_if_offline()
 
-  nm <- paste0(nm_("DESC-doc"), ".docx")
-  on.exit(unlink(nm))
+  file_to_download <- nm_("DESC-doc")
+  tmpdir <- withr::local_tempdir(file_to_download)
+  download_filename <- paste0(file_to_download, ".docx")
+  local_drive_loud_and_wide()
 
-  expect_message(
-    drive_download(file = nm_("DESC-doc")),
-    "File downloaded"
+  drive_download_message <- capture.output(
+    withr::with_dir(
+      tmpdir,
+      drive_download(file = file_to_download)
+    ),
+    type = "message"
   )
-  expect_true(file.exists(nm))
+  drive_download_message <- drive_download_message %>%
+    scrub_filepath(download_filename) %>%
+    scrub_filepath(file_to_download) %>%
+    scrub_file_id()
+  expect_snapshot(
+    write_utf8(drive_download_message)
+  )
+
+  expect_true(file.exists(file.path(tmpdir, download_filename)))
 })

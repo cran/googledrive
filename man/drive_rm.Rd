@@ -4,7 +4,7 @@
 \alias{drive_rm}
 \title{Delete files from Drive}
 \usage{
-drive_rm(..., verbose = TRUE)
+drive_rm(..., verbose = deprecated())
 }
 \arguments{
 \item{...}{One or more Drive files, specified in any valid way, i.e. as a
@@ -12,8 +12,12 @@ drive_rm(..., verbose = TRUE)
 any combination thereof. Elements are processed with \code{\link[=as_dribble]{as_dribble()}} and
 row-bound prior to deletion.}
 
-\item{verbose}{Logical, indicating whether to print informative messages
-(default \code{TRUE}).}
+\item{verbose}{\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#deprecated}{\figure{lifecycle-deprecated.svg}{options: alt='[Deprecated]'}}}{\strong{[Deprecated]}} This logical argument to
+individual googledrive functions is deprecated. To globally suppress
+googledrive messaging, use \code{options(googledrive_quiet = TRUE)} (the default
+behaviour is to emit informational messages). To suppress messaging in a
+more limited way, use the helpers \code{\link[=local_drive_quiet]{local_drive_quiet()}} or
+\code{\link[=with_drive_quiet]{with_drive_quiet()}}.}
 }
 \value{
 Logical vector, indicating whether the delete succeeded.
@@ -23,25 +27,29 @@ Caution: this will permanently delete your files! For a safer, reversible
 option, see \code{\link[=drive_trash]{drive_trash()}}.
 }
 \examples{
-\dontrun{
-## Create something to remove
-drive_upload(drive_example("chicken.txt"), name = "chicken-rm.txt")
+\dontshow{if (drive_has_token()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+# Target one of the official example files to copy (then remove)
+(src_file <- drive_example_remote("chicken.txt"))
 
-## Remove it by name
+# Create a copy, then remove it by name
+src_file \%>\%
+  drive_cp(name = "chicken-rm.txt")
 drive_rm("chicken-rm.txt")
 
-## Create several things to remove
-x1 <- drive_upload(drive_example("chicken.txt"), name = "chicken-abc.txt")
-drive_upload(drive_example("chicken.txt"), name = "chicken-def.txt")
-x2 <- drive_upload(drive_example("chicken.txt"), name = "chicken-ghi.txt")
+# Create several more copies
+x1 <- src_file \%>\%
+  drive_cp(name = "chicken-abc.txt")
+drive_cp(src_file, name = "chicken-def.txt")
+x2 <- src_file \%>\%
+  drive_cp(name = "chicken-ghi.txt")
 
-## Remove them all at once, specified in different ways
+# Remove the copies all at once, specified in different ways
 drive_rm(x1, "chicken-def.txt", as_id(x2))
-}
+\dontshow{\}) # examplesIf}
 }
 \seealso{
 Wraps the \code{files.delete} endpoint:
 \itemize{
-\item \url{https://developers.google.com/drive/v3/reference/files/delete}
+\item \url{https://developers.google.com/drive/api/v3/reference/files/delete}
 }
 }

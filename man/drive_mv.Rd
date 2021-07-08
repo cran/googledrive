@@ -4,22 +4,34 @@
 \alias{drive_mv}
 \title{Move a Drive file}
 \usage{
-drive_mv(file, path = NULL, name = NULL, overwrite = NA, verbose = TRUE)
+drive_mv(
+  file,
+  path = NULL,
+  name = NULL,
+  overwrite = NA,
+  verbose = deprecated()
+)
 }
 \arguments{
 \item{file}{Something that identifies the file of interest on your Google
 Drive. Can be a name or path, a file id or URL marked with \code{\link[=as_id]{as_id()}}, or a
 \code{\link{dribble}}.}
 
-\item{path}{Specifies target destination for the new file on Google
-Drive. Can be an actual path (character), a file id marked with \code{\link[=as_id]{as_id()}},
-or a \code{\link{dribble}}. If specified as an actual path, it is best to explicitly
-indicate if it's a folder by including a trailing slash, since it cannot
-always be worked out from the context of the call. Defaults to current name.}
+\item{path}{Specifies target destination for the file on Google
+Drive. Can be an actual path (character), a file id marked with
+\code{\link[=as_id]{as_id()}}, or a \code{\link{dribble}}.
+
+If \code{path} is a shortcut to a folder, it is automatically resolved to its
+target folder.
+
+If \code{path} is given as a path (as opposed to a \code{dribble} or an id), it is
+best to explicitly indicate if it's a folder by including a trailing
+slash, since it cannot always be worked out from the context of the call.
+By default, the file stays in its current folder.}
 
 \item{name}{Character, new file name if not specified as part of
-\code{path}. This will force \code{path} to be treated as a folder, even if it is
-character and lacks a trailing slash. Defaults to current name.}
+\code{path}. This will force \code{path} to be interpreted as a folder, even if it
+is character and lacks a trailing slash. By default, the file keeps its current name.}
 
 \item{overwrite}{Logical, indicating whether to check for a pre-existing file
 at the targetted "filepath". The quotes around "filepath" refer to the fact
@@ -39,56 +51,61 @@ thrown if two or more pre-existing files are found.
 Note that existence checks, based on filepath, are expensive operations, i.e.
 they require additional API calls.}
 
-\item{verbose}{Logical, indicating whether to print informative messages
-(default \code{TRUE}).}
+\item{verbose}{\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#deprecated}{\figure{lifecycle-deprecated.svg}{options: alt='[Deprecated]'}}}{\strong{[Deprecated]}} This logical argument to
+individual googledrive functions is deprecated. To globally suppress
+googledrive messaging, use \code{options(googledrive_quiet = TRUE)} (the default
+behaviour is to emit informational messages). To suppress messaging in a
+more limited way, use the helpers \code{\link[=local_drive_quiet]{local_drive_quiet()}} or
+\code{\link[=with_drive_quiet]{with_drive_quiet()}}.}
 }
 \value{
-An object of class \code{\link{dribble}}, a tibble with one row per item.
+An object of class \code{\link{dribble}}, a tibble with one row per file.
 }
 \description{
 Move a Drive file to a different folder, give it a different name, or both.
-Note that folders on Google Drive are not like folders on your local
-filesystem. They are more like a label, which implies that a Drive file can
-have multiple folders as direct parent! However, most people still use and
-think of them like "regular" folders. When we say "move a Drive file", it
-actually means: "add a new folder to this file's parents and remove the old
-one".
 }
 \examples{
-\dontrun{
-## create a file to move
-file <- drive_upload(drive_example("chicken.txt"), "chicken-mv.txt")
+\dontshow{if (drive_has_token()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+# create a file to move
+file <- drive_example_remote("chicken.txt") \%>\%
+  drive_cp("chicken-mv.txt")
 
-## rename it, but leave in current folder (root folder, in this case)
+# rename it, but leave in current folder (root folder, in this case)
 file <- drive_mv(file, "chicken-mv-renamed.txt")
 
-## create a folder to move the file into
+# create a folder to move the file into
 folder <- drive_mkdir("mv-folder")
 
-## move the file and rename it again,
-## specify destination as a dribble
+# move the file and rename it again,
+# specify destination as a dribble
 file <- drive_mv(file, path = folder, name = "chicken-mv-re-renamed.txt")
 
-## verify renamed file is now in the folder
+# verify renamed file is now in the folder
 drive_ls(folder)
 
-## move the file back to root folder
+# move the file back to root folder
 file <- drive_mv(file, "~/")
 
-## move it again
-## specify destination as path with trailing slash
-## to ensure we get a move vs. renaming it to "mv-folder"
+# move it again
+# specify destination as path with trailing slash
+# to ensure we get a move vs. renaming it to "mv-folder"
 file <- drive_mv(file, "mv-folder/")
 
-## `overwrite = FALSE` errors if something already exists at target filepath
-## THIS WILL ERROR!
+# `overwrite = FALSE` errors if something already exists at target filepath
+# THIS WILL ERROR!
 drive_create("name-squatter", path = "~/")
 drive_mv(file, path = "~/", name = "name-squatter", overwrite = FALSE)
 
-## `overwrite = TRUE` moves the existing item to trash, then proceeds
+# `overwrite = TRUE` moves the existing item to trash, then proceeds
 drive_mv(file, path = "~/", name = "name-squatter", overwrite = TRUE)
 
-## Clean up
+# Clean up
 drive_rm(file, folder)
+\dontshow{\}) # examplesIf}
+}
+\seealso{
+Makes a metadata-only request to the \code{files.update} endpoint:
+\itemize{
+\item \url{https://developers.google.com/drive/api/v3/reference/files/update}
 }
 }

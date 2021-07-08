@@ -5,38 +5,43 @@
 \alias{drive_untrash}
 \title{Move Drive files to or from trash}
 \usage{
-drive_trash(file, verbose = TRUE)
+drive_trash(file, verbose = deprecated())
 
-drive_untrash(file, verbose = TRUE)
+drive_untrash(file, verbose = deprecated())
 }
 \arguments{
 \item{file}{Something that identifies the file(s) of interest on your Google
 Drive. Can be a character vector of names/paths, a character vector of file
 ids or URLs marked with \code{\link[=as_id]{as_id()}}, or a \code{\link{dribble}}.}
 
-\item{verbose}{Logical, indicating whether to print informative messages
-(default \code{TRUE}).}
+\item{verbose}{\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#deprecated}{\figure{lifecycle-deprecated.svg}{options: alt='[Deprecated]'}}}{\strong{[Deprecated]}} This logical argument to
+individual googledrive functions is deprecated. To globally suppress
+googledrive messaging, use \code{options(googledrive_quiet = TRUE)} (the default
+behaviour is to emit informational messages). To suppress messaging in a
+more limited way, use the helpers \code{\link[=local_drive_quiet]{local_drive_quiet()}} or
+\code{\link[=with_drive_quiet]{with_drive_quiet()}}.}
 }
 \value{
-An object of class \code{\link{dribble}}, a tibble with one row per item.
+An object of class \code{\link{dribble}}, a tibble with one row per file.
 }
 \description{
 Move Drive files to or from trash
 }
 \examples{
-\dontrun{
-## Create a file and put it in the trash.
-file <- drive_upload(drive_example("chicken.txt"), "chicken-trash.txt")
+\dontshow{if (drive_has_token()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+# Create a file and put it in the trash.
+file <- drive_example_remote("chicken.txt") \%>\%
+  drive_cp("chicken-trash.txt")
 drive_trash("chicken-trash.txt")
 
-## Confirm it's in the trash
+# Confirm it's in the trash
 drive_find(trashed = TRUE)
 
-## Remove it from the trash and confirm
+# Remove it from the trash and confirm
 drive_untrash("chicken-trash.txt")
 drive_find(trashed = TRUE)
 
-## Clean up
+# Clean up
 drive_rm("chicken-trash.txt")
-}
+\dontshow{\}) # examplesIf}
 }

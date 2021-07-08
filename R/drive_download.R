@@ -1,59 +1,65 @@
 #' Download a Drive file
 #'
 #' @description This function downloads a file from Google Drive. Native Google
-#' file types, such as Google Docs, Google Sheets, and Google Slides, must be
-#' exported to a conventional local file type. This can be specified:
+#'   file types, such as Google Docs, Google Sheets, and Google Slides, must be
+#'   exported to a conventional local file type. This can be specified:
+
 #'   * explicitly via `type`
 #'   * implicitly via the file extension of `path`
-#'   * not at all, i.e. rely on default built into googledrive
-#' @description To see what export file types are even possible, see the
-#' [Drive API documentation](https://developers.google.com/drive/v3/web/manage-downloads#downloading_google_documents).
-#' Returned dribble contains local path to downloaded file in `local_path`.
+#'   * not at all, i.e. rely on the built-in default
+#'
+#' @description To see what export file types are even possible, see the [Drive
+#'   API
+#'   documentation](https://developers.google.com/drive/api/v3/ref-export-formats)
+#'    or the result of `drive_about()$exportFormats`. The returned dribble
+#'   includes a `local_path` column.
+#'
+#' @seealso [Download
+#'   files](https://developers.google.com/drive/api/v3/manage-downloads), in the
+#'   Drive API documentation.
 #'
 #' @template file-singular
 #' @param path Character. Path for output file. If absent, the default file name
 #'   is the file's name on Google Drive and the default location is working
 #'   directory, possibly with an added file extension.
 #' @param type Character. Only consulted if `file` is a native Google file.
-#'   Specifies the desired type of the downloaded file. Will be processed via
+#'   Specifies the desired type of the exported file. Will be processed via
 #'   [drive_mime_type()], so either a file extension like `"pdf"` or a full MIME
 #'   type like `"application/pdf"` is acceptable.
 #' @param overwrite A logical scalar. If local `path` already exists, do you
 #'   want to overwrite it?
 #' @template verbose
-#' @template dribble-return
+#' @eval return_dribble()
 #' @export
-#' @examples
-#' \dontrun{
-#' ## Upload a csv file into a Google Sheet
-#' file <- drive_upload(
-#'   drive_example("chicken.csv"),
-#'   type = "spreadsheet"
-#' )
+#' @examplesIf drive_has_token()
+#' # Target one of the official example files
+#' (src_file <- drive_example_remote("chicken_sheet"))
 #'
-#' ## Download Sheet as csv, explicit type
-#' (downloaded_file <- drive_download(file, type = "csv"))
+#' # Download Sheet as csv, explicit type
+#' downloaded_file <- drive_download(src_file, type = "csv")
 #'
-#' ## See local path to new file
+#' # See local path to new file
 #' downloaded_file$local_path
 #'
-#' ## Download as csv, type implicit in file extension
-#' drive_download(file, path = "my_csv_file.csv")
+#' # Download as csv, type implicit in file extension
+#' drive_download(src_file, path = "my_csv_file.csv")
 #'
-#' ## Download with default name and type (xlsx)
-#' drive_download(file)
+#' # Download with default name and type (xlsx)
+#' drive_download(src_file)
 #'
-#' ## Clean up
-#' unlink(c("chicken.csv", "chicken.csv.xlsx", "my_csv_file.csv"))
-#' drive_rm(file)
-#' }
+#' # Clean up
+#' unlink(c("chicken_sheet.csv", "chicken_sheet.xlsx", "my_csv_file.csv"))
 drive_download <- function(file,
                            path = NULL,
                            type = NULL,
                            overwrite = FALSE,
-                           verbose = TRUE) {
+                           verbose = deprecated()) {
+  warn_for_verbose(verbose)
   if (!is.null(path) && file.exists(path) && !overwrite) {
-    stop_glue("\nPath exists and overwrite is FALSE:\n  * {path}")
+    drive_abort(c(
+      "Local {.arg path} already exists and overwrite is {.code FALSE}:",
+      bulletize(gargle_map_cli(path, "{.path <<x>>}"))
+    ))
   }
   file <- as_dribble(file)
   file <- confirm_single_file(file)
@@ -65,7 +71,10 @@ drive_download <- function(file,
   mime_type <- file$drive_resource[[1]]$mimeType
 
   if (!grepl("google", mime_type) && !is.null(type)) {
-    message("Ignoring `type`. Only consulted for native Google file types.")
+    drive_bullets(c(
+      "!" = "Ignoring {.arg type}. Only consulted for native Google file types.",
+      " " = "MIME type of {.arg file}: {.field mime_type}."
+    ))
   }
 
   if (grepl("google", mime_type)) {
@@ -98,14 +107,14 @@ drive_download <- function(file,
   success <- httr::status_code(response) == 200 && file.exists(path)
 
   if (success) {
-    if (verbose) {
-      message_glue(
-        "\nFile downloaded:\n  * {file$name}\n",
-        "Saved locally as:\n  * {path}"
-      )
-    }
+    drive_bullets(c(
+      "File downloaded:",
+      bulletize(gargle_map_cli(file)),
+      "Saved locally as:",
+      "*" = "{.path {path}}"
+    ))
   } else {
-    stop_glue("The file doesn't seem to have downloaded.")
+    drive_abort("Download failed.")
   }
   invisible(put_column(file, nm = "local_path", val = path, .after = "name"))
 }
@@ -119,7 +128,10 @@ get_export_mime_type <- function(mime_type) {
   m <- .drive$translate_mime_types$mime_type_google == mime_type &
     is_true(.drive$translate_mime_types$default)
   if (!any(m)) {
-    stop_glue("\nNot a recognized Google MIME type:\n  * {mime_type}")
+    drive_abort(c(
+      "Not a recognized Google MIME type:",
+      bulletize(gargle_map_cli(mime_type), bullet = "x")
+    ))
   }
   .drive$translate_mime_types$mime_type_local[m]
 }
@@ -132,10 +144,12 @@ verify_export_mime_type <- function(mime_type, export_type) {
   if (!ok) {
     ## to be really nice, we would look these up in drive_mime_type() tibble
     ## and use the human_type, if found
-    stop_glue(
-      "\nCannot export Google file of type:\n  * {mime_type}\n",
-      "as a file of type:\n  * {export_type}"
-    )
+    drive_abort(c(
+      "Cannot export Google file of type:",
+      bulletize(gargle_map_cli(mime_type)),
+      "as a file of type:",
+      bulletize(gargle_map_cli(export_type))
+    ))
   }
   export_type
 }

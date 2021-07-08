@@ -1,13 +1,13 @@
-context("List folder contents")
-
 # ---- nm_fun ----
-nm_ <- nm_fun("TEST-drive-ls", NULL)
+nm_ <- nm_fun("TEST-drive_ls", user_run = FALSE)
 
 # ---- clean ----
 if (CLEAN) {
   drive_trash(c(
     nm_("list-me"),
-    nm_("this-should-not-exist")
+    nm_("list-a-folder-shortcut"),
+    nm_("this-should-not-exist"),
+    nm_("topdir")
   ))
 }
 
@@ -22,6 +22,7 @@ if (SETUP) {
     file.path(R.home("doc"), "html", "about.html"),
     path = file.path(nm_("list-me"), nm_("about-html"))
   )
+  shortcut_create(nm_("list-me"), name = nm_("list-a-folder-shortcut"))
 
   ## for testing `recursive = TRUE`
   top <- drive_mkdir(nm_("topdir"))
@@ -32,15 +33,15 @@ if (SETUP) {
     type = "document",
     starred = TRUE
   )
-  folder1_level1 <- drive_mkdir(nm_("folder1-level1"), parent = top)
-  drive_mkdir(nm_("folder2-level1"), parent = top)
+  folder1_level1 <- drive_mkdir(nm_("folder1-level1"), path = top)
+  drive_mkdir(nm_("folder2-level1"), path = top)
   x <- drive_upload(
     system.file("DESCRIPTION"),
     path = folder1_level1,
     name = nm_("banana"),
     type = "document"
   )
-  folder1_level2 <- drive_mkdir(nm_("folder1-level2"), parent = folder1_level1)
+  folder1_level2 <- drive_mkdir(nm_("folder1-level2"), path = folder1_level1)
   x <- drive_upload(
     system.file("DESCRIPTION"),
     path = folder1_level2,
@@ -55,10 +56,7 @@ test_that("drive_ls() errors if `path` does not exist", {
   skip_if_no_token()
   skip_if_offline()
 
-  expect_error(
-    drive_ls(nm_("this-should-not-exist")),
-    "does not identify at least one"
-  )
+  expect_snapshot(drive_ls(nm_("this-should-not-exist")), error = TRUE)
 })
 
 test_that("drive_ls() outputs contents of folder", {
@@ -67,7 +65,7 @@ test_that("drive_ls() outputs contents of folder", {
 
   ## path
   out <- drive_ls(nm_("list-me"))
-  expect_s3_class(out, "dribble")
+  expect_dribble(out)
   expect_true(setequal(out$name, c(nm_("about-html"), nm_("DESCRIPTION"))))
 
   ## dribble
@@ -76,8 +74,33 @@ test_that("drive_ls() outputs contents of folder", {
   expect_identical(out[c("name", "id")], out2[c("name", "id")])
 
   ## id
-  out3 <- drive_ls(as_id(d$id))
+  out3 <- drive_ls(d$id)
   expect_identical(out[c("name", "id")], out3[c("name", "id")])
+})
+
+test_that("drive_ls() list contents of the target of a folder shortcut", {
+  skip_if_no_token()
+  skip_if_offline()
+
+  target_name <- nm_("list-me")
+  shortcut_name <- nm_("list-a-folder-shortcut")
+
+  direct_ls <- drive_ls(target_name)
+
+  local_drive_loud_and_wide()
+  drive_ls_message <- capture.output(
+    indirect_ls <- drive_ls(shortcut_name),
+    type = "message"
+  )
+  drive_ls_message <- drive_ls_message %>%
+    scrub_filepath(target_name) %>%
+    scrub_filepath(shortcut_name) %>%
+    scrub_file_id()
+  expect_snapshot(
+    write_utf8(drive_ls_message)
+  )
+
+  expect_equal(direct_ls$id, indirect_ls$id)
 })
 
 test_that("drive_ls() passes ... through to drive_find()", {
