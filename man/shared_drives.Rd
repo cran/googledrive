@@ -34,10 +34,12 @@ to shared drives. While it's always a good idea to get things into a
 \section{Specific shared drive}{
 
 To search one specific shared drive, pass its name, marked id, or
-\code{\link{dribble}} to \code{shared_drive} somewhere in the call, like so:\preformatted{drive_find(..., shared_drive = "i_am_a_shared_drive_name")
+\code{\link{dribble}} to \code{shared_drive} somewhere in the call, like so:
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{drive_find(..., shared_drive = "i_am_a_shared_drive_name")
 drive_find(..., shared_drive = as_id("i_am_a_shared_drive_id"))
 drive_find(..., shared_drive = i_am_a_shared_drive_dribble)
-}
+}\if{html}{\out{</div>}}
 
 The value provided to \code{shared_drive} is pre-processed with
 \code{\link[=as_shared_drive]{as_shared_drive()}}.
@@ -46,10 +48,12 @@ The value provided to \code{shared_drive} is pre-processed with
 \section{Other collections}{
 
 To search other collections, pass the \code{corpus} parameter somewhere in the
-call, like so:\preformatted{drive_find(..., corpus = "user")
+call, like so:
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{drive_find(..., corpus = "user")
 drive_find(..., corpus = "allDrives")
 drive_find(..., corpus = "domain")
-}
+}\if{html}{\out{</div>}}
 
 Possible values of \code{corpus} and what they mean:
 \itemize{
@@ -76,8 +80,8 @@ Here is some of the best official Google reading about shared drives:
 \item \href{https://cloud.google.com/blog/products/application-development/upcoming-changes-to-the-google-drive-api-and-google-picker-api}{Upcoming changes to the Google Drive API and Google Picker API} from the Google Cloud blog
 \item \url{https://developers.google.com/drive/api/v3/about-shareddrives}
 \item \url{https://developers.google.com/drive/api/v3/shared-drives-diffs}
-\item \href{https://support.google.com/a/users/answer/9310351}{Get started with shared drives} from Google Workspace Learning Center
-\item \href{https://support.google.com/a/users/answer/9310156}{Best practices for shared drives} from Google Workspace Learning Center
+\item Get started with shared drives: \verb{https://support.google.com/a/users/answer/9310351} from Google Workspace Learning Center
+\item Best practices for shared drives: \verb{https://support.google.com/a/users/answer/9310156} from Google Workspace Learning Center
 }
 }
 

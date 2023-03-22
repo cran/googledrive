@@ -95,7 +95,7 @@ chicken_sheet <- drive_example_local("chicken.csv") \%>\%
 # check out the new Sheet!
 drive_browse(chicken_sheet)
 
-# clean-up
+# Clean up
 drive_find("chicken.*upload") \%>\% drive_rm()
 
 # Upload a file and, at the same time, star it
@@ -110,17 +110,17 @@ drive_rm(chicken)
 
 # `overwrite = FALSE` errors if something already exists at target filepath
 # THIS WILL ERROR!
-drive_create("name-squatter")
+drive_create("name-squatter-upload")
 drive_example_local("chicken.jpg") \%>\%
   drive_upload(
-    name = "name-squatter",
+    name = "name-squatter-upload",
     overwrite = FALSE
   )
 
 # `overwrite = TRUE` moves the existing item to trash, then proceeds
 chicken <- drive_example_local("chicken.jpg") \%>\%
   drive_upload(
-    name = "name-squatter",
+    name = "name-squatter-upload",
     overwrite = TRUE
   )
 

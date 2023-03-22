@@ -66,7 +66,7 @@
 #' # `overwrite = TRUE` moves an existing file to trash, then proceeds
 #' drive_create("VisiCalc", path = b4xl, overwrite = TRUE)
 #'
-#' # clean up
+#' # Clean up
 #' drive_rm(wordstar, b4xl, execuvision)
 drive_create <- function(name,
                          path = NULL,
@@ -78,6 +78,7 @@ drive_create <- function(name,
 
   # in the special case of creating a shortcut, `name` is not required
   if (!identical(drive_mime_type(type), drive_mime_type("shortcut"))) {
+    check_required(name)
     stopifnot(is_string(name))
   }
   # the order and role of `path` and `name` is naturally inverted here,
@@ -117,7 +118,7 @@ drive_create <- function(name,
     "Created Drive file:",
     bulletize(gargle_map_cli(out)),
     "With MIME type:",
-    bulletize(gargle_map_cli(purrr::pluck(out, 'drive_resource', 1, 'mimeType')))
+    bulletize(gargle_map_cli(purrr::pluck(out, "drive_resource", 1, "mimeType")))
   ))
   invisible(out)
 }

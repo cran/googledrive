@@ -23,11 +23,11 @@
 #'
 #'
 
-#' @section File path: When `what = "path"` the [`dribble`] gains a character
-#'   column holding each file's path. This can be *very slow*, so use with
-#'   caution.
+#' @section File path:
+#' When `what = "path"` the [`dribble`] gains a character column holding each
+#' file's path. This can be *very slow*, so use with caution.
 #'
-#'   The example path `~/a/b/` illustrates two conventions used in googledrive:
+#' The example path `~/a/b/` illustrates two conventions used in googledrive:
 
 #'   * The leading `~/` means that the folder `a` is located in the current
 #'   user's "My Drive" root folder.
@@ -167,7 +167,7 @@ drive_reveal_this <- function(file, this) {
   out <- promote(file, elem_snake_case)
 
   if (is_dttm && is.character(out[[elem_snake_case]])) {
-    out[[elem_snake_case]] <-as.POSIXct(
+    out[[elem_snake_case]] <- as.POSIXct(
       out[[elem_snake_case]],
       format = "%Y-%m-%dT%H:%M:%OSZ",
       tz = "UTC"

@@ -1,7 +1,8 @@
 # drive_auth_configure works
 
     Code
-      drive_auth_configure(app = gargle::gargle_app(), path = "PATH")
-    Error <rlang_error>
-      Must supply exactly one of `app` or `path`, not both
+      drive_auth_configure(client = gargle::gargle_client(), path = "PATH")
+    Condition
+      Error in `drive_auth_configure()`:
+      ! Must supply exactly one of `client` or `path`, not both
 

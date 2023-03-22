@@ -19,9 +19,9 @@ drive_example_remote(matches)
 \arguments{
 \item{matches}{A regular expression that matches the name of the desired
 example file(s). This argument is optional for the plural forms
-(\code{drive_examples_local()} and \code{drive_examples_remote()} and, if provided,
+(\code{drive_examples_local()} and \code{drive_examples_remote()}) and, if provided,
 multiple matches are allowed. The single forms (\code{drive_example_local()} and
-\code{drive_example_reomote()} require this argument and require that there is
+\code{drive_example_remote()}) require this argument and require that there is
 exactly one match.}
 }
 \value{
@@ -38,11 +38,13 @@ the example files. See \code{vignette("example-files", package = "googledrive")}
 for more.
 }
 \examples{
-drive_examples_remote()
-drive_examples_remote("chicken")
-drive_example_remote("chicken_doc")
-
 drive_examples_local() \%>\% basename()
 drive_examples_local("chicken") \%>\% basename()
 drive_example_local("imdb")
+
+\dontshow{if (drive_has_token()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+drive_examples_remote()
+drive_examples_remote("chicken")
+drive_example_remote("chicken_doc")
+\dontshow{\}) # examplesIf}
 }

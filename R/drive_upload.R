@@ -47,7 +47,7 @@
 #' # check out the new Sheet!
 #' drive_browse(chicken_sheet)
 #'
-#' # clean-up
+#' # Clean up
 #' drive_find("chicken.*upload") %>% drive_rm()
 #'
 #' # Upload a file and, at the same time, star it
@@ -62,17 +62,17 @@
 #'
 #' # `overwrite = FALSE` errors if something already exists at target filepath
 #' # THIS WILL ERROR!
-#' drive_create("name-squatter")
+#' drive_create("name-squatter-upload")
 #' drive_example_local("chicken.jpg") %>%
 #'   drive_upload(
-#'     name = "name-squatter",
+#'     name = "name-squatter-upload",
 #'     overwrite = FALSE
 #'   )
 #'
 #' # `overwrite = TRUE` moves the existing item to trash, then proceeds
 #' chicken <- drive_example_local("chicken.jpg") %>%
 #'   drive_upload(
-#'     name = "name-squatter",
+#'     name = "name-squatter-upload",
 #'     overwrite = TRUE
 #'   )
 #'
@@ -114,7 +114,7 @@ drive_upload <- function(media,
   # load (path, name) into params
   if (!is.null(path)) {
     path <- as_parent(path)
-    params[["parents"]] <- path$id
+    params[["parents"]] <- I(path$id)
   }
   params[["name"]] <- name %||% basename(media)
 
@@ -132,7 +132,7 @@ drive_upload <- function(media,
   meta_file <- withr::local_file(
     tempfile("drive-upload-meta", fileext = ".json")
   )
-  write_utf8(jsonlite::toJSON(params), meta_file)
+  write_utf8(jsonlite::toJSON(params, auto_unbox = TRUE), meta_file)
   ## media uploads have unique body situations, so customizing here.
   request$body <- list(
     metadata = httr::upload_file(

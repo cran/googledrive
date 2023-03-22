@@ -6,7 +6,7 @@ nm_ <- nm_fun("TEST-drive_upload", user_run = FALSE)
 if (CLEAN) {
   drive_trash(c(
     nm_("upload-into-me"),
-    nm_("uploade-via-folder-shortcut"),
+    nm_("upload-via-folder-shortcut"),
     nm_("DESCRIPTION")
   ))
 }
@@ -50,7 +50,7 @@ test_that("drive_upload() can place file via folder-shortcut", {
   defer_drive_rm(upload_name)
 
   target_parent <- drive_get(nm_("upload-into-me"))
-  shortcut <-  nm_("upload-via-folder-shortcut")
+  shortcut <- nm_("upload-via-folder-shortcut")
 
   uploadee <- drive_upload(
     system.file("DESCRIPTION"),

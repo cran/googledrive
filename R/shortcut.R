@@ -130,7 +130,7 @@ shortcut_create <- function(file,
 #' shortcut_resolve(sc_dat)
 #' # No error, but resolution is unsuccessful due to non-existent target
 #'
-#' # Clean-up
+#' # Clean up
 #' drive_rm(sc_dat)
 shortcut_resolve <- function(file) {
   file <- as_dribble(file)
@@ -183,7 +183,13 @@ resolve_one <- function(name, id, drive_resource, ...) {
   }
   out <- tryCatch(
     drive_get(as_id(target_id)),
-    gargle_error_request_failed = function(e) bad_target(target_id)
+    purrr_error_indexed = function(err) {
+      if (rlang::cnd_inherits(err, "gargle_error_request_failed")) {
+        bad_target(target_id)
+      } else {
+        cnd_signal(err)
+      }
+    }
   )
   out %>%
     put_column(nm = "id_shortcut", val = id, .after = "id") %>%

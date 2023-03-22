@@ -31,7 +31,7 @@ This is a generic function.
 
 For maximum clarity, get your files into a \code{\link{dribble}} (or capture file id)
 as early as possible. When specifying via path, it's best to include the
-trailing slash when you're targetting a folder. If you want the folder \code{foo},
+trailing slash when you're targeting a folder. If you want the folder \code{foo},
 say \verb{foo/}, not \code{foo}.
 
 Some functions, such as \code{\link[=drive_cp]{drive_cp()}}, \code{\link[=drive_mkdir]{drive_mkdir()}}, \code{\link[=drive_mv]{drive_mv()}}, and
@@ -56,7 +56,7 @@ as_dribble(c("alfa", "alfa/bravo"))
 # specify the file id (substitute a real file id of your own!)
 # as_dribble(as_id("0B0Gh-SuuA2nTOGZVTXZTREgwZ2M"))
 
-# cleanup
+# Clean up
 drive_find("alfa") \%>\% drive_rm()
 \dontshow{\}) # examplesIf}
 }

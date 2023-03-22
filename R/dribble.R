@@ -156,7 +156,7 @@ has_drive_resource <- function(x) {
 #'
 #' For maximum clarity, get your files into a [`dribble`] (or capture file id)
 #' as early as possible. When specifying via path, it's best to include the
-#' trailing slash when you're targetting a folder. If you want the folder `foo`,
+#' trailing slash when you're targeting a folder. If you want the folder `foo`,
 #' say `foo/`, not `foo`.
 #'
 #' Some functions, such as [drive_cp()], [drive_mkdir()], [drive_mv()], and
@@ -185,7 +185,7 @@ has_drive_resource <- function(x) {
 #' # specify the file id (substitute a real file id of your own!)
 #' # as_dribble(as_id("0B0Gh-SuuA2nTOGZVTXZTREgwZ2M"))
 #'
-#' # cleanup
+#' # Clean up
 #' drive_find("alfa") %>% drive_rm()
 as_dribble <- function(x, ...) UseMethod("as_dribble")
 
@@ -212,10 +212,12 @@ as_dribble.data.frame <- function(x, ...) validate_dribble(new_dribble(x))
 
 #' @export
 as_dribble.list <- function(x, ...) {
-  if (length(x) == 0) return(dribble())
+  if (length(x) == 0) {
+    return(dribble())
+  }
 
   required_nms <- c("name", "id", "kind")
-  stopifnot(map_lgl(x, ~all(required_nms %in% names(.x))))
+  stopifnot(map_lgl(x, ~ all(required_nms %in% names(.x))))
 
   as_dribble(
     tibble(
@@ -248,7 +250,8 @@ as_parent <- function(d) {
   if (is_folder_shortcut(d)) {
     drive_bullets(c(
       i = "Parent specified via {.arg {in_var}} is a shortcut; resolving to \\
-           its target folder"))
+           its target folder"
+    ))
     d <- shortcut_resolve(d)
   }
   if (!is_parental(d)) {

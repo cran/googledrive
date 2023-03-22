@@ -53,10 +53,21 @@ drive_auth <- function(email = gargle::gargle_oauth_email(),
                        cache = gargle::gargle_oauth_cache(),
                        use_oob = gargle::gargle_oob_default(),
                        token = NULL) {
+  if (!missing(email) && !missing(path)) {
+    drive_warn(c(
+      "It is very unusual to provide both {.arg email} and \\
+       {.arg path} to {.fun drive_auth}.",
+      "They relate to two different auth methods.",
+      "The {.arg path} argument is only for a service account token.",
+      "If you need to specify your own OAuth client, use \\
+      {.fun drive_auth_configure}."
+    ))
+  }
   env_unbind(.googledrive, "root_folder")
+
   cred <- gargle::token_fetch(
     scopes = scopes,
-    app = drive_oauth_app() %||% gargle::tidyverse_app(),
+    app = drive_oauth_client() %||% gargle::tidyverse_client(),
     email = email,
     path = path,
     package = "googledrive",
@@ -66,11 +77,11 @@ drive_auth <- function(email = gargle::gargle_oauth_email(),
   )
   if (!inherits(cred, "Token2.0")) {
     drive_abort(c(
-      "Can't get Google credentials",
-      "i" = "Are you running googledrive in a non-interactive session? \\
+      "Can't get Google credentials.",
+      "i" = "Are you running {.pkg googledrive} in a non-interactive session? \\
              Consider:",
-      "*" = "{.fun drive_deauth} to prevent the attempt to get credentials",
-      "*" = "Call {.fun drive_auth} directly with all necessary specifics",
+      "*" = "Call {.fun drive_deauth} to prevent the attempt to get credentials.",
+      "*" = "Call {.fun drive_auth} directly with all necessary specifics.",
       "i" = "See gargle's \"Non-interactive auth\" vignette for more details:",
       "i" = "{.url https://gargle.r-lib.org/articles/non-interactive-auth.html}"
     ))
@@ -149,50 +160,53 @@ drive_has_token <- function() {
 #' @family auth functions
 #' @export
 #' @examples
-#' # see and store the current user-configured OAuth app (probaby `NULL`)
-#' (original_app <- drive_oauth_app())
+#' # see and store the current user-configured OAuth client (probaby `NULL`)
+#' (original_client <- drive_oauth_client())
 #'
 #' # see and store the current user-configured API key (probaby `NULL`)
 #' (original_api_key <- drive_api_key())
 #'
-#' if (require(httr)) {
-#'   # bring your own app via client id (aka key) and secret
-#'   google_app <- httr::oauth_app(
-#'     "my-awesome-google-api-wrapping-package",
-#'     key = "123456789.apps.googleusercontent.com",
-#'     secret = "abcdefghijklmnopqrstuvwxyz"
-#'   )
-#'   google_key <- "the-key-I-got-for-a-google-API"
-#'   drive_auth_configure(app = google_app, api_key = google_key)
-#'
-#'   # confirm the changes
-#'   drive_oauth_app()
-#'   drive_api_key()
-#' }
-#'
-#' \dontrun{
-#' # bring your own app via JSON downloaded from Google Developers Console
-#' drive_auth_configure(
-#'   path = "/path/to/the/JSON/you/downloaded/from/google/dev/console.json"
+#' # the preferred way to configure your own client is via a JSON file
+#' # downloaded from Google Developers Console
+#' # this example JSON is indicative, but fake
+#' path_to_json <- system.file(
+#'   "extdata", "data", "client_secret_123.googleusercontent.com.json",
+#'   package = "googledrive"
 #' )
-#' }
+#' drive_auth_configure(path = path_to_json)
+#'
+#' # this is also obviously a fake API key
+#' drive_auth_configure(api_key = "the_key_I_got_for_a_google_API")
+#'
+#' # confirm the changes
+#' drive_oauth_client()
+#' drive_api_key()
 #'
 #' # restore original auth config
-#' drive_auth_configure(app = original_app, api_key = original_api_key)
-drive_auth_configure <- function(app, path, api_key) {
-  if (!missing(app) && !missing(path)) {
-    drive_abort("Must supply exactly one of {.arg app} or {.arg path}, not both")
+#' drive_auth_configure(client = original_client, api_key = original_api_key)
+drive_auth_configure <- function(client, path, api_key, app = deprecated()) {
+  if (lifecycle::is_present(app)) {
+    lifecycle::deprecate_warn(
+      "2.1.0",
+      "drive_auth_configure(app)",
+      "drive_auth_configure(client)"
+    )
+    drive_auth_configure(client = app, path = path, api_key = api_key)
+  }
+
+  if (!missing(client) && !missing(path)) {
+    drive_abort("Must supply exactly one of {.arg client} or {.arg path}, not both")
   }
   stopifnot(missing(api_key) || is.null(api_key) || is_string(api_key))
 
   if (!missing(path)) {
     stopifnot(is_string(path))
-    app <- gargle::oauth_app_from_json(path)
+    client <- gargle::gargle_oauth_client_from_json(path)
   }
-  stopifnot(missing(app) || is.null(app) || inherits(app, "oauth_app"))
+  stopifnot(missing(client) || is.null(client) || inherits(client, "gargle_oauth_client"))
 
-  if (!missing(app) || !missing(path)) {
-    .auth$set_app(app)
+  if (!missing(client) || !missing(path)) {
+    .auth$set_app(client)
   }
 
   if (!missing(api_key)) {
@@ -204,11 +218,15 @@ drive_auth_configure <- function(app, path, api_key) {
 
 #' @export
 #' @rdname drive_auth_configure
-drive_api_key <- function() .auth$api_key
+drive_api_key <- function() {
+  .auth$api_key
+}
 
 #' @export
 #' @rdname drive_auth_configure
-drive_oauth_app <- function() .auth$app
+drive_oauth_client <- function() {
+  .auth$app
+}
 
 # unexported helpers that are nice for internal use ----
 drive_auth_internal <- function(account = c("docs", "testing"),
@@ -221,10 +239,10 @@ drive_auth_internal <- function(account = c("docs", "testing"),
       message = c(
         "Auth unsuccessful:",
         if (!can_decrypt) {
-          c("x" = "Can't decrypt the {.field {account}} service account token")
+          c("x" = "Can't decrypt the {.field {account}} service account token.")
         },
         if (!online) {
-          c("x" = "We don't appear to be online (or maybe the Drive API is down?)")
+          c("x" = "We don't appear to be online. Or maybe the Drive API is down?")
         }
       ),
       class = "googledrive_auth_internal_error",
@@ -254,14 +272,17 @@ drive_auth_testing <- function(scopes = NULL) {
 local_deauth <- function(env = parent.frame()) {
   original_cred <- .auth$get_cred()
   original_auth_active <- .auth$auth_active
-  drive_bullets(c("i" = "Going into deauthorized state"))
+  drive_bullets(c("i" = "Going into deauthorized state."))
   withr::defer(
-    drive_bullets(c("i" = "Restoring previous auth state")),
+    drive_bullets(c("i" = "Restoring previous auth state.")),
     envir = env
   )
-  withr::defer({
-    .auth$set_cred(original_cred)
-    .auth$set_auth_active(original_auth_active)
-  }, envir = env)
+  withr::defer(
+    {
+      .auth$set_cred(original_cred)
+      .auth$set_auth_active(original_auth_active)
+    },
+    envir = env
+  )
   drive_deauth()
 }

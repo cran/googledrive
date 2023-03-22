@@ -48,11 +48,11 @@
 #'
 #' # `overwrite = FALSE` errors if something already exists at target filepath
 #' # THIS WILL ERROR!
-#' drive_create("name-squatter", path = "~/")
-#' drive_mv(file, path = "~/", name = "name-squatter", overwrite = FALSE)
+#' drive_create("name-squatter-mv", path = "~/")
+#' drive_mv(file, path = "~/", name = "name-squatter-mv", overwrite = FALSE)
 #'
 #' # `overwrite = TRUE` moves the existing item to trash, then proceeds
-#' drive_mv(file, path = "~/", name = "name-squatter", overwrite = TRUE)
+#' drive_mv(file, path = "~/", name = "name-squatter-mv", overwrite = TRUE)
 #'
 #' # Clean up
 #' drive_rm(file, folder)
@@ -80,11 +80,12 @@ drive_mv <- function(file,
   params <- list()
 
   # load (path, name) into params ... maybe
-  parents_before <- pluck(file, "drive_resource", 1, "parents")
+  parent_before <- pluck(file, "drive_resource", 1, "parents", 1)
   if (!is.null(path)) {
     path <- as_parent(path)
-    if (!path$id %in% parents_before) {
+    if (path$id != parent_before) {
       params[["addParents"]] <- path$id
+      params[["removeParents"]] <- parent_before
     }
   }
   if (!is.null(name) && name != file$name) {
@@ -99,7 +100,7 @@ drive_mv <- function(file,
   }
 
   check_for_overwrite(
-    parent = params[["addParents"]] %||% parents_before[[1]],
+    parent = params[["addParents"]] %||% parent_before,
     name   = params[["name"]]       %||% file$name,
     overwrite = overwrite
   )
