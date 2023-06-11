@@ -63,8 +63,8 @@ currently configured OAuth client and API key, respectively.
 # downloaded from Google Developers Console
 # this example JSON is indicative, but fake
 path_to_json <- system.file(
-  "extdata", "data", "client_secret_123.googleusercontent.com.json",
-  package = "googledrive"
+  "extdata", "client_secret_installed.googleusercontent.com.json",
+  package = "gargle"
 )
 drive_auth_configure(path = path_to_json)
 
@@ -81,6 +81,7 @@ drive_auth_configure(client = original_client, api_key = original_api_key)
 \seealso{
 Other auth functions: 
 \code{\link{drive_auth}()},
-\code{\link{drive_deauth}()}
+\code{\link{drive_deauth}()},
+\code{\link{drive_scopes}()}
 }
 \concept{auth functions}

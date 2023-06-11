@@ -1,3 +1,21 @@
+# googledrive 2.1.1
+
+* `drive_auth(subject =)` is a new argument that can be used with
+  `drive_auth(path =)`, i.e. when using a service account. The `path` and
+  `subject` arguments are ultimately processed by
+  `gargle::credentials_service_account()` and support the use of a service
+  account to impersonate a normal user (#413).
+
+* All requests now route through `gargle::request_retry()` (#380).
+
+* `drive_scopes()` is a new function to access scopes relevant to the Drive API.
+  When called without arguments, `drive_scopes()` returns a named vector of
+  scopes, where the names are the associated short aliases. `drive_scopes()` can
+  also be called with a character vector; any element that's recognized as a
+  short alias is replaced with the associated full scope (#430).
+  
+* Various internal changes to sync up with gargle v1.5.0.
+
 # googledrive 2.1.0
 
 ## Syncing up with gargle

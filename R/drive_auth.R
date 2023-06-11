@@ -1,5 +1,5 @@
-## This file is the interface between googledrive and the
-## auth functionality in gargle.
+# This file is the interface between googledrive and the
+# auth functionality in gargle.
 
 # Initialization happens in .onLoad()
 .auth <- NULL
@@ -20,11 +20,26 @@ gargle_lookup_table <- list(
 #' @eval gargle:::PREFIX_auth_details(gargle_lookup_table)
 #' @eval gargle:::PREFIX_auth_params()
 #'
+#' @param scopes One or more API scopes. Each scope can be specified in full or,
+#'   for Drive API-specific scopes, in an abbreviated form that is recognized by
+#'   [drive_scopes()]:
+#'   * "drive" = "https://www.googleapis.com/auth/drive" (the default)
+#'   * "full" = "https://www.googleapis.com/auth/drive" (same as "drive")
+#'   * "drive.readonly" = "https://www.googleapis.com/auth/drive.readonly"
+#'   * "drive.file" = "https://www.googleapis.com/auth/drive.file"
+#'   * "drive.appdata" = "https://www.googleapis.com/auth/drive.appdata"
+#'   * "drive.metadata" = "https://www.googleapis.com/auth/drive.metadata"
+#'   * "drive.metadata.readonly" = "https://www.googleapis.com/auth/drive.metadata.readonly"
+#'   * "drive.photos.readonly" = "https://www.googleapis.com/auth/drive.photos.readonly"
+#'   * "drive.scripts" = "https://www.googleapis.com/auth/drive.scripts
+#'
+#'   See <https://developers.google.com/drive/api/guides/api-specific-auth> for
+#'   details on the permissions for each scope.
+#'
 #' @family auth functions
 #' @export
 #'
-#' @examples
-#' \dontrun{
+#' @examplesIf rlang::is_interactive()
 #' # load/refresh existing credentials, if available
 #' # otherwise, go to browser for authentication and authorization
 #' drive_auth()
@@ -40,36 +55,30 @@ gargle_lookup_table <- list(
 #' drive_auth(email = NA)
 #'
 #' # use a 'read only' scope, so it's impossible to edit or delete files
-#' drive_auth(
-#'   scopes = "https://www.googleapis.com/auth/drive.readonly"
-#' )
+#' drive_auth(scopes = "drive.readonly")
 #'
 #' # use a service account token
 #' drive_auth(path = "foofy-83ee9e7c9c48.json")
-#' }
 drive_auth <- function(email = gargle::gargle_oauth_email(),
-                       path = NULL,
-                       scopes = "https://www.googleapis.com/auth/drive",
+                       path = NULL, subject = NULL,
+                       scopes = "drive",
                        cache = gargle::gargle_oauth_cache(),
                        use_oob = gargle::gargle_oob_default(),
                        token = NULL) {
-  if (!missing(email) && !missing(path)) {
-    drive_warn(c(
-      "It is very unusual to provide both {.arg email} and \\
-       {.arg path} to {.fun drive_auth}.",
-      "They relate to two different auth methods.",
-      "The {.arg path} argument is only for a service account token.",
-      "If you need to specify your own OAuth client, use \\
-      {.fun drive_auth_configure}."
-    ))
-  }
+  gargle::check_is_service_account(path, hint = "drive_auth_configure")
+  scopes <- drive_scopes(scopes)
   env_unbind(.googledrive, "root_folder")
+
+  # If `token` is not `NULL`, it's much better to error noisily now, before
+  # getting silently swallowed by `token_fetch()`.
+  force(token)
 
   cred <- gargle::token_fetch(
     scopes = scopes,
-    app = drive_oauth_client() %||% gargle::tidyverse_client(),
+    client = drive_oauth_client() %||% gargle::tidyverse_client(),
     email = email,
     path = path,
+    subject = subject,
     package = "googledrive",
     cache = cache,
     use_oob = use_oob,
@@ -98,14 +107,15 @@ drive_auth <- function(email = gargle::gargle_oauth_email(),
 #'
 #' @family auth functions
 #' @export
-#' @examples
-#' \dontrun{
+#' @examplesIf rlang::is_interactive()
 #' drive_deauth()
 #' drive_user()
-#' public_file <-
-#'   drive_get(as_id("1Hj-k7NpPSyeOR3R7j4KuWnru6kZaqqOAE8_db5gowIM"))
+#'
+#' # in a deauth'ed state, we can still get metadata on a world-readable file
+#' public_file <- drive_example_remote("chicken.csv")
+#' public_file
+#' # we can still download it too
 #' drive_download(public_file)
-#' }
 drive_deauth <- function() {
   .auth$set_auth_active(FALSE)
   .auth$clear_cred()
@@ -170,8 +180,8 @@ drive_has_token <- function() {
 #' # downloaded from Google Developers Console
 #' # this example JSON is indicative, but fake
 #' path_to_json <- system.file(
-#'   "extdata", "data", "client_secret_123.googleusercontent.com.json",
-#'   package = "googledrive"
+#'   "extdata", "client_secret_installed.googleusercontent.com.json",
+#'   package = "gargle"
 #' )
 #' drive_auth_configure(path = path_to_json)
 #'
@@ -206,7 +216,7 @@ drive_auth_configure <- function(client, path, api_key, app = deprecated()) {
   stopifnot(missing(client) || is.null(client) || inherits(client, "gargle_oauth_client"))
 
   if (!missing(client) || !missing(path)) {
-    .auth$set_app(client)
+    .auth$set_client(client)
   }
 
   if (!missing(api_key)) {
@@ -225,14 +235,58 @@ drive_api_key <- function() {
 #' @export
 #' @rdname drive_auth_configure
 drive_oauth_client <- function() {
-  .auth$app
+  .auth$client
+}
+
+#' Produce scopes specific to the Drive API
+#'
+#' When called with no arguments, `drive_scopes()` returns a named character vector
+#' of scopes associated with the Drive API. If `drive_scopes(scopes =)` is given,
+#' an abbreviated entry such as `"drive.readonly"` is expanded to a full scope
+#' (`"https://www.googleapis.com/auth/drive.readonly"` in this case).
+#' Unrecognized scopes are passed through unchanged.
+#'
+#' @inheritParams drive_auth
+#'
+#' @seealso <https://developers.google.com/drive/api/guides/api-specific-auth> for details on
+#'   the permissions for each scope.
+#' @returns A character vector of scopes.
+#' @family auth functions
+#' @export
+#' @examples
+#' drive_scopes("full")
+#' drive_scopes("drive.readonly")
+#' drive_scopes()
+drive_scopes <- function(scopes = NULL) {
+  if (is.null(scopes)) {
+    drive_api_scopes
+  } else {
+    resolve_scopes(user_scopes = scopes, package_scopes = drive_api_scopes)
+  }
+}
+
+drive_api_scopes <- c(
+  drive = "https://www.googleapis.com/auth/drive",
+  full = "https://www.googleapis.com/auth/drive",
+  drive.readonly = "https://www.googleapis.com/auth/drive.readonly",
+  drive.file = "https://www.googleapis.com/auth/drive.file",
+  drive.appdata = "https://www.googleapis.com/auth/drive.appdata",
+  drive.metadata = "https://www.googleapis.com/auth/drive.metadata",
+  drive.metadata.readonly = "https://www.googleapis.com/auth/drive.metadata.readonly",
+  drive.photos.readonly = "https://www.googleapis.com/auth/drive.photos.readonly",
+  drive.scripts = "https://www.googleapis.com/auth/drive.scripts"
+)
+
+resolve_scopes <- function(user_scopes, package_scopes) {
+  m <- match(user_scopes, names(package_scopes))
+  ifelse(is.na(m), user_scopes, package_scopes[m])
 }
 
 # unexported helpers that are nice for internal use ----
 drive_auth_internal <- function(account = c("docs", "testing"),
                                 scopes = NULL) {
   account <- match.arg(account)
-  can_decrypt <- gargle:::secret_can_decrypt("googledrive")
+  can_decrypt <- gargle::secret_has_key("GOOGLEDRIVE_KEY")
   online <- !is.null(curl::nslookup("drive.googleapis.com", error = FALSE))
   if (!can_decrypt || !online) {
     drive_abort(
@@ -255,8 +309,13 @@ drive_auth_internal <- function(account = c("docs", "testing"),
   # TODO: revisit when I do PKG_scopes()
   # https://github.com/r-lib/gargle/issues/103
   scopes <- scopes %||% "https://www.googleapis.com/auth/drive"
-  json <- gargle:::secret_read("googledrive", filename)
-  drive_auth(scopes = scopes, path = rawToChar(json))
+  drive_auth(
+    scopes = scopes,
+    path = gargle::secret_decrypt_json(
+      system.file("secret", filename, package = "googledrive"),
+      "GOOGLEDRIVE_KEY"
+    )
+  )
   print(drive_user())
   invisible(TRUE)
 }
