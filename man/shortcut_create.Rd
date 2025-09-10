@@ -54,7 +54,7 @@ relatively new feature in Drive; they were introduced when Drive stopped
 allowing a file to have more than 1 parent folder.
 }
 \examples{
-\dontshow{if (drive_has_token()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+\dontshow{if (drive_has_token()) withAutoprint(\{ # examplesIf}
 # Target one of the official example files
 (src_file <- drive_example_remote("chicken_sheet"))
 
@@ -63,19 +63,19 @@ sc1 <- shortcut_create(src_file)
 # This shortcut could now be moved, renamed, etc.
 
 # Create a shortcut in the default location with a custom name
-sc2 <- src_file \%>\%
+sc2 <- src_file |>
   shortcut_create(name = "chicken_sheet_second_shortcut")
 
 # Create a folder, then put a shortcut there, with default name
 folder <- drive_mkdir("chicken_sheet_shortcut_folder")
-sc3 <- src_file \%>\%
+sc3 <- src_file |>
   shortcut_create(folder)
 
 # Look at all these shortcuts
 (dat <- drive_find("chicken_sheet", type = "shortcut"))
 
 # Confirm the shortcuts all target the original file
-dat <- dat \%>\%
+dat <- dat |>
   drive_reveal("shortcut_details")
 purrr::map_chr(dat$shortcut_details, "targetId")
 as_id(src_file)

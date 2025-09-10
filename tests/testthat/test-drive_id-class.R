@@ -30,16 +30,22 @@ test_that("as_id() extracts ids from Drive URLs but not other URLs", {
   x <- c(
     "https://docs.google.com/document/d/doc12345/edit",
     "https://drive.google.com/drive/folders/folder12345",
+    # https://github.com/tidyverse/googledrive/issues/450
+    "https://drive.google.com/drive/folders/folder12345?usp=drive_link",
     "https://drive.google.com/open?id=blob12345",
     "https://docs.google.com/a/example.com/spreadsheets/d/team12345",
-    ## Team Drive URL
+    # Team Drive URL
     "https://drive.google.com/drive/u/0/folders/teamdrive12345"
   )
   expect_identical(
     as_id(x),
     as_id(c(
-      "doc12345", "folder12345", "blob12345",
-      "team12345", "teamdrive12345"
+      "doc12345",
+      "folder12345",
+      "folder12345",
+      "blob12345",
+      "team12345",
+      "teamdrive12345"
     ))
   )
   ## properly recognizes a missing URL
@@ -72,7 +78,7 @@ test_that("presence of drive_id column doesn't prevent row binding of dribbles",
   alfa <- x[1:2, ]
   bravo <- x[3:4, ]
 
-  expect_error_free(
+  expect_no_error(
     out <- vec_rbind(alfa, bravo)
   )
   expect_equal(out[c("name", "id")], x[1:4, c("name", "id")])
@@ -102,19 +108,19 @@ test_that("gargle_map_cli() is implemented for drive_id", {
 
 ## low-level helpers
 test_that("new_drive_id() handles 0-length input and NA", {
-  expect_error_free(
+  expect_no_error(
     out <- new_drive_id(character())
   )
   expect_length(out, 0)
   expect_true(is_drive_id(out))
 
-  expect_error_free(
+  expect_no_error(
     out <- new_drive_id(NA_character_)
   )
   expect_true(is.na(out))
   expect_true(is_drive_id(out))
 
-  expect_error_free(
+  expect_no_error(
     out <- new_drive_id(c(NA_character_, "abc"))
   )
   expect_true(is.na(out[1]))

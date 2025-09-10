@@ -136,18 +136,16 @@ test_that("rationalize_path_name() won't hit API if we can infer `path` is a fol
 })
 
 test_that("rationalize_path_name() populates `path` and `name` and correctly", {
-  with_mock(
-    confirm_clear_path = function(path, name) NULL,
-    {
-      expect_identical(
-        rationalize_path_name(path = "FILE_NAME", name = NULL),
-        list(path = NULL, name = "FILE_NAME")
-      )
-      expect_identical(
-        rationalize_path_name(path = "PARENT_FOLDER/FILE_NAME", name = NULL),
-        list(path = "PARENT_FOLDER/", name = "FILE_NAME")
-      )
-    }
+  local_mocked_bindings(
+    confirm_clear_path = function(path, name) NULL
+  )
+  expect_identical(
+    rationalize_path_name(path = "FILE_NAME", name = NULL),
+    list(path = NULL, name = "FILE_NAME")
+  )
+  expect_identical(
+    rationalize_path_name(path = "PARENT_FOLDER/FILE_NAME", name = NULL),
+    list(path = "PARENT_FOLDER/", name = "FILE_NAME")
   )
 })
 
@@ -171,7 +169,7 @@ test_that("check_for_overwrite() does its job", {
     "already exist"
   )
 
-  expect_error_free(
+  expect_no_error(
     second <- drive_create(
       me_("name-collision"),
       path = PARENT_ID,
@@ -185,7 +183,7 @@ test_that("check_for_overwrite() does its job", {
   )
   expect_false(first$id == second$id)
 
-  expect_error_free(
+  expect_no_error(
     drive_create(
       me_("name-collision"),
       path = PARENT_ID,
@@ -213,4 +211,8 @@ test_that("check_for_overwrite() copes with `parent = NULL`", {
     check_for_overwrite(parent = NULL, nm_("create-in-me"), overwrite = FALSE),
     "already exist"
   )
+})
+
+test_that("apply_extension() doesn't apply 'NA' as an extension", {
+  expect_equal(apply_extension("somefile", NA), "somefile")
 })

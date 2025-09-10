@@ -53,9 +53,11 @@ as_id <- function(x, ...) UseMethod("as_id")
 
 #' @export
 as_id.default <- function(x, ...) {
-  drive_abort("
+  drive_abort(
+    "
     Don't know how to coerce an object of class {.cls {class(x)}} into \\
-    a {.cls drive_id}.")
+    a {.cls drive_id}."
+  )
 }
 
 #' @export
@@ -153,7 +155,7 @@ pillar_shaft.drive_id <- function(x, ...) {
 ##       /d/FILE_ID   Drive file
 ## /folders/FILE_ID   Drive folder
 ##       id=FILE_ID   uploaded blob
-id_regexp <- "(/d/|/folders/|id=)[^/]+"
+id_regexp <- "(/d/|/folders/|id=)[^/?]+"
 
 is_drive_url <- function(x) grepl("^http", x) & grepl(id_regexp, x)
 
