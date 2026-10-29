@@ -19,10 +19,15 @@
 #' shared_drive_find()
 #' }
 shared_drive_find <- function(pattern = NULL, n_max = Inf, ...) {
-  if (!is.null(pattern) && !(is_string(pattern))) {
-    drive_abort("{.arg pattern} must be a character string.")
-  }
-  stopifnot(is.numeric(n_max), n_max >= 0, length(n_max) == 1)
+  check_non_id_string(
+    pattern,
+    what = "a regular expression",
+    hint = c(
+      i = "To get a shared drive by its ID, use {.code shared_drive_get(id = )}."
+    ),
+    allow_null = TRUE
+  )
+  check_number_whole(n_max, min = 0, allow_infinite = TRUE)
   if (n_max < 1) {
     return(dribble())
   }

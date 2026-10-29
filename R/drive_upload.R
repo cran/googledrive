@@ -28,7 +28,6 @@
 #'   [drive_mime_type()].
 #' @template dots-metadata
 #' @template overwrite
-#' @template verbose
 #'
 #' @eval return_dribble()
 #' @export
@@ -54,7 +53,7 @@
 #' chicken <- drive_example_local("chicken.jpg") |>
 #'   drive_upload(starred = "true")
 #'
-#' # Is is really starred? YES
+#' # Is it really starred? YES
 #' purrr::pluck(chicken, "drive_resource", 1, "starred")
 #'
 #' # Clean up
@@ -94,10 +93,8 @@ drive_upload <- function(
   name = NULL,
   type = NULL,
   ...,
-  overwrite = NA,
-  verbose = deprecated()
+  overwrite = NA
 ) {
-  warn_for_verbose(verbose)
   if (file.exists(media)) {
     media <- enc2utf8(media)
   } else {

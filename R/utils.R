@@ -1,7 +1,5 @@
 isFALSE <- function(x) identical(x, FALSE)
 
-is_toggle <- function(x) length(x) == 1L && is.logical(x)
-
 last <- function(x) pluck(x, length(x))
 
 escape_regex <- function(x) {
@@ -90,4 +88,42 @@ partition_params <- function(input, nms_to_match) {
     out$unmatched <- out$unmatched[!m]
   }
   out
+}
+
+# rlang doesn't export check_character() (as of 1.3.0). This is a copy of the
+# version in rlang's standalone-types-check.R. Delete if rlang exports it.
+check_character <- function(
+  x,
+  ...,
+  allow_na = TRUE,
+  allow_null = FALSE,
+  arg = caller_arg(x),
+  call = caller_env()
+) {
+  if (!missing(x)) {
+    if (is_character(x)) {
+      if (!allow_na && any(is.na(x))) {
+        abort(
+          sprintf("`%s` can't contain NA values.", arg),
+          arg = arg,
+          call = call
+        )
+      }
+
+      return(invisible(NULL))
+    }
+
+    if (allow_null && is_null(x)) {
+      return(invisible(NULL))
+    }
+  }
+
+  stop_input_type(
+    x,
+    "a character vector",
+    ...,
+    allow_null = allow_null,
+    arg = arg,
+    call = call
+  )
 }

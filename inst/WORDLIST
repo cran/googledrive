@@ -3,6 +3,7 @@ Auth
 CLI
 CMD
 Codecov
+Colab
 Colaboratory
 D'Agostino
 GCE
@@ -26,9 +27,11 @@ cli's
 commenter
 csv
 de
+decrypt
 determinine
 dev
 dplyr
+erroring
 fileOrganizer
 funder
 ggplot
@@ -37,6 +40,7 @@ googleapis
 googledrive's
 googlesheets
 https
+httr
 httr's
 ing
 lifecycle
@@ -53,10 +57,8 @@ reprexes
 rlang's
 rprojroot
 setwise
-targetted
 testthat
 th
-threshhold
 tibble
 tibble's
 tidyverse

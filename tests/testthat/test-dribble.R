@@ -87,6 +87,11 @@ test_that("`[` drops dribble class when not valid", {
   expect_false(inherits(d[, 1], "dribble"))
 })
 
+test_that("dribble predicates require a dribble", {
+  expect_snapshot(no_file("a"), error = TRUE)
+  expect_snapshot(is_folder(data.frame(x = 1)), error = TRUE)
+})
+
 test_that("dribble nrow checkers work", {
   d <- dribble()
   expect_true(no_file(d))
@@ -120,14 +125,14 @@ test_that("is_folder() works", {
   expect_identical(is_folder(dribble()), logical(0))
   d <- new_dribble(
     tibble::tribble(
-      ~name,
-      ~id,
-      ~drive_resource,
-      "a",
-      "aa",
-      list(mimeType = "application/vnd.google-apps.folder"),
-      "b",
-      "bb",
+      ~name                                                 ,
+      ~id                                                   ,
+      ~drive_resource                                       ,
+      "a"                                                   ,
+      "aa"                                                  ,
+      list(mimeType = "application/vnd.google-apps.folder") ,
+      "b"                                                   ,
+      "bb"                                                  ,
       list(mimeType = "foo")
     )
   )
@@ -153,8 +158,18 @@ test_that("as_dribble.list() works for good input", {
   expect_dribble(d)
 })
 
+test_that("as_dribble() reports missing or mistyped columns of a data frame", {
+  expect_snapshot(as_dribble(data.frame(x = 1)), error = TRUE)
+
+  d <- data.frame(name = "a", id = 1)
+  d$drive_resource <- list(list(kind = "drive#file"))
+  expect_snapshot(as_dribble(d), error = TRUE)
+
+  d <- data.frame(name = factor("a"), id = "b", drive_resource = "c")
+  expect_snapshot(as_dribble(d), error = TRUE)
+})
+
 test_that("as_dribble.list() catches bad input", {
-  ## not testing error messages, as_dribble.list() intended for internal use
   drib_lst <- list(
     name = "name"
   )
@@ -166,6 +181,12 @@ test_that("as_dribble.list() catches bad input", {
     kind = "whatever"
   )
   expect_snapshot(as_dribble(list(drib_lst)), error = TRUE)
+
+  ok_lst <- list(name = "name", id = "id", kind = "drive#file")
+  expect_snapshot(
+    as_dribble(list(ok_lst, list(name = "a"), list(id = "b"), list())),
+    error = TRUE
+  )
 })
 
 test_that("as_parent() throws specific errors", {
@@ -200,4 +221,18 @@ test_that("as_parent() throws specific errors", {
     },
     error = TRUE
   )
+})
+
+test_that("is_mine() handles resources without an owner", {
+  d <- new_dribble(
+    tibble(
+      name = c("mine", "shared"),
+      id = c("1", "2"),
+      drive_resource = list(
+        list(kind = "drive#file", owners = list(list(me = TRUE))),
+        list(kind = "drive#file")
+      )
+    )
+  )
+  expect_identical(is_mine(d), c(TRUE, FALSE))
 })

@@ -24,7 +24,6 @@
 #'   with [request_generate()] Should contain the `method`, `url`, `body`,
 #'   and `token`.
 #' @param ... Optional arguments passed through to the HTTP method.
-#' @template verbose
 #'
 #' @return `request_make()`: Object of class `response` from [httr].
 #' @export
@@ -47,7 +46,7 @@ do_request <- function(x, ...) {
 #' @param n Function that computes the number of items in one response or page.
 #'   The default function always returns `1` and therefore treats each page as
 #'   an item. If you know more about the structure of the response, you can
-#'   pass another function to count and threshhold, for example, the number of
+#'   pass another function to count and threshold, for example, the number of
 #'   files or comments.
 #' @export
 #' @return `do_paginated_request()`: List of lists, representing the returned
@@ -80,11 +79,8 @@ do_paginated_request <- function(
   x,
   ...,
   n_max = Inf,
-  n = function(res) 1,
-  verbose = deprecated()
+  n = function(res) 1
 ) {
-  warn_for_verbose(verbose)
-
   ## when traversing pages, you can't cleanly separate the task into
   ## request_make() and gargle::response_process(), because you need to process
   ## response / page i to get the pageToken for request / page i + 1

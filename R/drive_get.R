@@ -55,8 +55,6 @@
 #'   ignored.
 #' @template shared_drive-singular
 #' @template corpus
-#' @template verbose
-#' @template team_drive-singular
 #'
 #' @eval return_dribble(extras = "If the target files were specified via `path`,
 #'   there will be a `path` column.")
@@ -120,25 +118,13 @@ drive_get <- function(
   path = NULL,
   id = NULL,
   shared_drive = NULL,
-  corpus = NULL,
-  verbose = deprecated(),
-  team_drive = deprecated()
+  corpus = NULL
 ) {
-  warn_for_verbose(verbose)
   if (length(path) + length(id) == 0) {
     return(dribble_with_path())
   }
-  stopifnot(is.null(path) || is.character(path))
-  stopifnot(is.null(id) || is.character(id))
-
-  if (lifecycle::is_present(team_drive)) {
-    lifecycle::deprecate_warn(
-      "2.0.0",
-      "drive_get(team_drive)",
-      "drive_get(shared_drive)"
-    )
-    shared_drive <- shared_drive %||% team_drive
-  }
+  check_character(path, allow_null = TRUE)
+  check_character(id, allow_null = TRUE)
 
   if (!is.null(path) && any(is_drive_url(path))) {
     path <- as_id(path)
@@ -150,16 +136,15 @@ drive_get <- function(
   }
 
   if (is.null(path)) {
-    as_dribble(map(as_id(id), get_one_file_id))
+    id <- as_id(id)
+    check_character(id, allow_na = FALSE)
+    as_dribble(map(id, get_one_file_id))
   } else {
     drive_get_path(path, shared_drive, corpus)
   }
 }
 
 get_one_file_id <- function(id) {
-  if (is.na(id)) {
-    drive_abort("Can't {.fun drive_get} a file when {.arg id} is {.code NA}.")
-  }
   # drive_id validity checks catch the id = "" case, but just FYI:
   # when id = "", drive.files.get actually becomes a call to drive.files.list
   # and, therefore, returns 100 files by default; this is a bad thing

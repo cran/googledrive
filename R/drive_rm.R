@@ -10,7 +10,6 @@
 #' [`dribble`], by name or path, or by file id or URL marked with [as_id()]. Or
 #' any combination thereof. Elements are processed with [as_dribble()] and
 #' row-bound prior to deletion.
-#' @template verbose
 #'
 #' @return Logical vector, indicating whether the delete succeeded.
 #' @export
@@ -33,15 +32,14 @@
 #'
 #' # Remove the copies all at once, specified in different ways
 #' drive_rm(x1, "chicken-def.txt", as_id(x2))
-drive_rm <- function(..., verbose = deprecated()) {
-  warn_for_verbose(verbose)
+drive_rm <- function(...) {
   dots <- list(...)
   if (length(dots) == 0) {
     dots <- list(NULL)
   }
 
   # explicitly select on var name to exclude 'path', if present
-  file <- map(dots, ~ as_dribble(.x)[c("name", "id", "drive_resource")])
+  file <- map(dots, ~ as_dribble(.x)[names(dribble_ptype)])
   file <- vec_rbind(!!!file)
   # filter to the unique file ids (multiple parents mean drive_get() and
   # therefore as_dribble() can return >1 row representing a single file)

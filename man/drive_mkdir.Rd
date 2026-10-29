@@ -4,7 +4,7 @@
 \alias{drive_mkdir}
 \title{Create a Drive folder}
 \usage{
-drive_mkdir(name, path = NULL, ..., overwrite = NA, verbose = deprecated())
+drive_mkdir(name, path = NULL, ..., overwrite = NA)
 }
 \arguments{
 \item{name}{Name for the new folder or, optionally, a path that specifies
@@ -22,7 +22,7 @@ body" section of the Drive API docs for the associated endpoint to learn
 about relevant parameters.}
 
 \item{overwrite}{Logical, indicating whether to check for a pre-existing file
-at the targetted "filepath". The quotes around "filepath" refer to the fact
+at the targeted "filepath". The quotes around "filepath" refer to the fact
 that Drive does not impose a 1-to-1 relationship between filepaths and files,
 like a typical file system; read more about that in \code{\link[=drive_get]{drive_get()}}.
 \itemize{
@@ -31,20 +31,15 @@ files with the same filepath.
 \item \code{TRUE}: Check for a pre-existing file at the filepath. If there is
 zero or one, move a pre-existing file to the trash, then carry on. Note
 that the new file does not inherit any properties from the old one, such
-as sharing or publishing settings. It will have a new file ID. An error is
-thrown if two or more pre-existing files are found.
+as sharing or publishing settings. It will have a new file ID. An error
+is thrown if two or more pre-existing files are found. If you need to
+keep the file ID (and its sharing/publishing settings), use
+\code{drive_update()} or \code{drive_put()}.
 \item \code{FALSE}: Error if there is any pre-existing file at the filepath.
 }
 
 Note that existence checks, based on filepath, are expensive operations, i.e.
 they require additional API calls.}
-
-\item{verbose}{\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#deprecated}{\figure{lifecycle-deprecated.svg}{options: alt='[Deprecated]'}}}{\strong{[Deprecated]}} This logical argument to
-individual googledrive functions is deprecated. To globally suppress
-googledrive messaging, use \code{options(googledrive_quiet = TRUE)} (the default
-behaviour is to emit informational messages). To suppress messaging in a
-more limited way, use the helpers \code{\link[=local_drive_quiet]{local_drive_quiet()}} or
-\code{\link[=with_drive_quiet]{with_drive_quiet()}}.}
 }
 \value{
 An object of class \code{\link{dribble}}, a tibble with one row per file.

@@ -65,8 +65,6 @@
 #' @param ... Other parameters to pass along in the request. The most likely
 #'   candidate is `q`. See below and the API's
 #'   [Search for files and folders guide](https://developers.google.com/drive/api/v3/search-files).
-#' @template verbose
-#' @template team_drive-singular
 #'
 #' @eval return_dribble()
 #' @examples
@@ -133,25 +131,40 @@ drive_find <- function(
   n_max = Inf,
   shared_drive = NULL,
   corpus = NULL,
-  ...,
-  verbose = deprecated(),
-  team_drive = deprecated()
+  ...
 ) {
-  warn_for_verbose(verbose)
-  if (!is.null(pattern) && !(is_string(pattern))) {
-    drive_abort("{.arg pattern} must be a character string.")
-  }
-  stopifnot(is_toggle(trashed))
-  stopifnot(is.numeric(n_max), n_max >= 0, length(n_max) == 1)
+  drive_find_impl(
+    pattern = pattern,
+    trashed = trashed,
+    type = type,
+    n_max = n_max,
+    shared_drive = shared_drive,
+    corpus = corpus,
+    ...
+  )
+}
 
-  if (lifecycle::is_present(team_drive)) {
-    lifecycle::deprecate_warn(
-      "2.0.0",
-      "drive_find(team_drive)",
-      "drive_find(shared_drive)"
-    )
-    shared_drive <- shared_drive %||% team_drive
-  }
+# also used internally, e.g. by drive_get() and drive_ls(), so errors can
+# report the user-facing caller
+drive_find_impl <- function(
+  pattern = NULL,
+  trashed = FALSE,
+  type = NULL,
+  n_max = Inf,
+  shared_drive = NULL,
+  corpus = NULL,
+  ...,
+  call = caller_env()
+) {
+  check_non_id_string(
+    pattern,
+    what = "a regular expression",
+    hint = c(i = "To get a file by its ID, use {.code drive_get(id = )}."),
+    allow_null = TRUE,
+    call = call
+  )
+  check_bool(trashed, allow_na = TRUE, call = call)
+  check_number_whole(n_max, min = 0, allow_infinite = TRUE, call = call)
 
   if (n_max < 1) {
     return(dribble())
@@ -162,7 +175,7 @@ drive_find <- function(
   if (!has_name(params, "orderBy")) {
     params[["orderBy"]] <- "recency desc"
   }
-  params <- marshal_q_clauses(params)
+  params <- marshal_q_clauses(params, call = call)
 
   trash_clause <- switch(
     as.character(trashed),
@@ -182,7 +195,10 @@ drive_find <- function(
 
   params$q <- and(params$q)
 
-  params <- append(params, handle_shared_drives(shared_drive, corpus))
+  params <- append(
+    params,
+    handle_shared_drives(shared_drive, corpus, call = call)
+  )
 
   request <- request_generate(endpoint = "drive.files.list", params = params)
   proc_res_list <- do_paginated_request(
@@ -212,14 +228,19 @@ drive_find <- function(
 
 ## finds all the q clauses and collapses into one character vector of clauses
 ## these are destined to be and'ed to form q in the query
-marshal_q_clauses <- function(params) {
+marshal_q_clauses <- function(params, call = caller_env()) {
   params <- partition_params(params, "q")
   if (length(params[["matched"]]) == 0) {
     return(params[["unmatched"]])
   }
 
   q_bits <- params[["matched"]]
-  stopifnot(all(vapply(q_bits, is.character, logical(1))))
+  is_chr <- map_lgl(q_bits, is.character)
+  if (!all(is_chr)) {
+    # pass the first offending `q` so the message says what it is
+    bad_q <- q_bits[[which(!is_chr)[1]]]
+    stop_input_type(bad_q, "a character vector", arg = "q", call = call)
+  }
   q_bits <- unique(unlist(q_bits, use.names = FALSE))
   q_bits <- q_bits[lengths(q_bits) > 0]
   c(params[["unmatched"]], q = list(q_bits))
@@ -230,23 +251,24 @@ parenthesize <- function(x) glue("({x})")
 and <- function(x) glue_collapse(parenthesize(x), sep = " and ")
 or <- function(x) glue_collapse(x, sep = " or ")
 
-handle_shared_drives <- function(shared_drive, corpus) {
+handle_shared_drives <- function(shared_drive, corpus, call = caller_env()) {
+  check_string(corpus, allow_null = TRUE, call = call)
   if (!is.null(shared_drive)) {
     shared_drive <- as_shared_drive(shared_drive)
     if (no_file(shared_drive)) {
-      drive_abort("Can't find the requested {.arg shared_drive}.")
+      drive_abort("Can't find the requested {.arg shared_drive}.", call = call)
+    }
+    if (!single_file(shared_drive)) {
+      drive_abort(
+        "{.arg shared_drive} must identify exactly one shared drive, \\
+         not {nrow(shared_drive)}.",
+        call = call
+      )
     }
     shared_drive <- as_id(shared_drive)
-  }
-  if (identical(corpus, "all")) {
-    lifecycle::deprecate_warn(
-      "2.0.0",
-      "drive_find(corpus = 'now expects \"allDrives\" instead of \"all\"')"
-    )
-    corpus <- "allDrives"
   }
   if (is.null(shared_drive) && is.null(corpus)) {
     return()
   }
-  shared_drive_params(shared_drive, corpus)
+  shared_drive_params(shared_drive, corpus, call = call)
 }

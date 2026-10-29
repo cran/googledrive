@@ -32,7 +32,6 @@
 #'   provide additional information, such as the `emailAddress` (when grantee
 #'   `type` is `"group"` or `"user"`) or the `domain` (when grantee type is
 #'   `"domain"`). Read the API docs linked below for more details.
-#' @template verbose
 #'
 #' @eval return_dribble(extras = "There will be extra columns, `shared` and
 #'   `permissions_resource`.")
@@ -78,13 +77,10 @@ drive_share <- function(
     "organizer"
   ),
   type = c("user", "group", "domain", "anyone"),
-  ...,
-  verbose = deprecated()
+  ...
 ) {
-  warn_for_verbose(verbose)
-
-  role <- match.arg(role)
-  type <- match.arg(type)
+  role <- arg_match(role)
+  type <- arg_match(type)
   file <- as_dribble(file)
   file <- confirm_some_files(file)
 
@@ -127,8 +123,7 @@ drive_share <- function(
 
 #' @rdname drive_share
 #' @export
-drive_share_anyone <- function(file, verbose = deprecated()) {
-  warn_for_verbose(verbose)
+drive_share_anyone <- function(file) {
   drive_share(file = file, role = "reader", type = "anyone")
 }
 

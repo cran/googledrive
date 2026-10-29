@@ -34,13 +34,17 @@ drive_endpoints <- function(i = NULL) {
   if (is.null(i) || is_expose(i)) {
     i <- seq_along(.endpoints)
   }
-  stopifnot(is.character(i) || (is.numeric(i)))
+  if (!is.character(i) && !is.numeric(i)) {
+    stop_input_type(i, "a character or numeric vector")
+  }
   .endpoints[i]
 }
 
 #' @rdname drive_endpoints
 #' @export
 drive_endpoint <- function(i) {
-  stopifnot(is_string(i) || (is.numeric(i) && length(i) == 1))
+  if (!is_string(i) && !is_scalar_integerish(i)) {
+    stop_input_type(i, "a single string or a whole number")
+  }
   .endpoints[[i]]
 }

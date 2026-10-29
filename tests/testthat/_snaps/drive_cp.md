@@ -23,7 +23,7 @@
     Code
       drive_cp(file, nm_("i-am-a-folder"))
     Condition
-      Error in `confirm_clear_path()`:
+      Error in `drive_cp()`:
       ! Unclear if `path` specifies parent folder or full path to the new file, including its name.
       See `?as_dribble()` for advice on how to make this clear.
 
@@ -51,7 +51,7 @@
       file_cp <- drive_cp(nm_("i-am-a-file"), path = nm_("file-name"), name = nm_(
         "file-name"))
     Condition
-      Error in `as_parent()`:
+      Error in `drive_cp()`:
       ! Parent specified via `path` is invalid:
       x Does not exist.
 
@@ -60,7 +60,7 @@
     Code
       file_cp <- drive_cp(nm_("i-am-a-file"), append_slash(nm_("not-unique-folder")))
     Condition
-      Error in `as_parent()`:
+      Error in `drive_cp()`:
       ! Parent specified via `path` is invalid:
       x Doesn't uniquely identify exactly one folder or shared drive.
 

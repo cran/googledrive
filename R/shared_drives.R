@@ -125,14 +125,16 @@ NULL
 shared_drive_params <- function(
   driveId = NULL,
   corpora = NULL,
-  includeItemsFromAllDrives = NULL
+  includeItemsFromAllDrives = NULL,
+  call = caller_env()
 ) {
   rationalize_corpus(
     new_corpus(
       driveId,
       corpora,
       includeItemsFromAllDrives
-    )
+    ),
+    call = call
   )
 }
 
@@ -142,17 +144,13 @@ new_corpus <- function(
   includeItemsFromAllDrives = NULL
 ) {
   if (!is.null(driveId)) {
-    # can't use is_string() because object of class drive_id IS acceptable
-    stopifnot(is.character(driveId), length(driveId) == 1)
+    check_string(driveId)
   }
   if (!is.null(corpora)) {
-    stopifnot(is_string(corpora))
+    check_string(corpora)
   }
   if (!is.null(includeItemsFromAllDrives)) {
-    stopifnot(
-      is.logical(includeItemsFromAllDrives),
-      length(includeItemsFromAllDrives) == 1
-    )
+    check_bool(includeItemsFromAllDrives)
   }
   structure(
     list(
@@ -170,20 +168,21 @@ new_corpus <- function(
 #   1. if `driveId` is provided and `corpora` is not, we fill in
 #      `corpora = "drive"`
 #   2. we always send `includeItemsFromAllDrives = TRUE`
-rationalize_corpus <- function(corpus) {
+rationalize_corpus <- function(corpus, call = caller_env()) {
   stopifnot(inherits(corpus, "corpus"))
 
   if (!is.null(corpus[["driveId"]])) {
     corpus[["corpora"]] <- corpus[["corpora"]] %||% "drive"
   }
 
-  validate_corpora(corpus[["corpora"]])
+  validate_corpora(corpus[["corpora"]], call = call)
 
   if (corpus[["corpora"]] == "drive" && is.null(corpus[["driveId"]])) {
     drive_abort(
       '
       When {.code corpus = "drive"}, you must also specify \\
-      the {.arg shared_drive}.'
+      the {.arg shared_drive}.',
+      call = call
     )
   }
 
@@ -191,7 +190,8 @@ rationalize_corpus <- function(corpus) {
     drive_abort(
       '
       When {.code corpus != "drive"}, you must not specify \\
-      a {.arg shared_drive}.'
+      a {.arg shared_drive}.',
+      call = call
     )
   }
 
@@ -202,20 +202,14 @@ rationalize_corpus <- function(corpus) {
 
 valid_corpora <- c("user", "drive", "allDrives", "domain")
 
-validate_corpora <- function(corpora) {
-  if (!corpora %in% valid_corpora) {
-    # yes, I intentionally use `corpus` in this message, even
-    # though the actual API parameter is `corpora`
-    # googledrive's user-facing functions have `corpus` in their signature and
-    # the rationale is explained elsewhere in this file
-    drive_abort(c(
-      "Invalid value for {.arg corpus}:",
-      bulletize(gargle_map_cli(corpora), bullet = "x"),
-      "These are the only acceptable values:",
-      bulletize(gargle_map_cli(valid_corpora))
-    ))
-  }
-  invisible(corpora)
+validate_corpora <- function(corpora, call = caller_env()) {
+  # yes, I intentionally use `corpus` in this message, even
+  # though the actual API parameter is `corpora`
+  # googledrive's user-facing functions have `corpus` in their signature and
+  # the rationale is explained elsewhere in this file
+  invisible(
+    arg_match0(corpora, valid_corpora, arg_nm = "corpus", error_call = call)
+  )
 }
 
 #' Coerce to shared drive
@@ -280,7 +274,7 @@ as_shared_drive.list <- function(x, ...) {
 }
 
 validate_shared_drive_dribble <- function(x) {
-  stopifnot(inherits(x, "dribble"))
+  confirm_dribble(x)
   if (!all(is_shared_drive(x))) {
     drive_abort(
       "
